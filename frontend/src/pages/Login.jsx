@@ -1,8 +1,10 @@
 import { useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,13 +24,17 @@ function Login() {
         }
       );
 
-      console.log("Login successful:", response.data);
+      //console.log("Login successful:", response.data);
+      console.log("LOGIN RESPONSE:", JSON.stringify(response.data, null, 2));
 
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
-      }
+        if (response.data.id) localStorage.setItem("userId", response.data.id);
+        if (response.data.name) localStorage.setItem("userName", response.data.name);
+        if (response.data.email) localStorage.setItem("userEmail", response.data.email);
 
-      alert("Login successful!");
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error(error);
       alert("Login failed!");

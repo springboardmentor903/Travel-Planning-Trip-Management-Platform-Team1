@@ -32,7 +32,12 @@ public class TripController {
         return tripService.createTrip(trip);
     }
 
-    @GetMapping
+    // OLD CODE - kept for reference
+    // @GetMapping
+    // public List<Trip> getMyTrips(Authentication authentication) {
+
+    // FIX - supports both /api/trips and /api/trips/my for authenticated user trips
+    @GetMapping({"", "/my"})
     public List<Trip> getMyTrips(Authentication authentication) {
 
         User user = userRepository.findByEmail(authentication.getName())
