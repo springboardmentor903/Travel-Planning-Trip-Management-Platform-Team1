@@ -50,7 +50,7 @@ public class DashboardController {
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
-        List<Trip> trips = tripRepository.findByUser(user);
+        List<Trip> trips = tripRepository.findMyTrips(user);
 
         LocalDate today = LocalDate.now();
 

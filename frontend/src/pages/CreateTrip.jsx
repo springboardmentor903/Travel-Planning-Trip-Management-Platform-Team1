@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 function CreateTrip() {
   const navigate = useNavigate();
@@ -24,13 +25,8 @@ function CreateTrip() {
     status: "PLANNED",
   });
 
-  // ==========================================
-  // AUTH CONFIG
-  // ==========================================
-
   const getAuthConfig = () => {
     const token = localStorage.getItem("token");
-
     return {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -39,21 +35,12 @@ function CreateTrip() {
     };
   };
 
-  // ==========================================
-  // CHECK LOGIN
-  // ==========================================
-
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (!token) {
       navigate("/login");
     }
   }, [navigate]);
-
-  // ==========================================
-  // SEARCH GOOGLE PLACES
-  // ==========================================
 
   const searchDestinations = (query) => {
     setDestinationSearch(query);
@@ -76,27 +63,20 @@ function CreateTrip() {
         const response = await axios.get(
           "http://localhost:8080/api/destinations/search",
           {
-            params: {
-              query: query.trim(),
-            },
+            params: { query: query.trim() },
             ...getAuthConfig(),
           }
         );
 
-        console.log("GOOGLE PLACES RESPONSE:", response.data);
-
         const places = response.data?.places || [];
-
         setSuggestions(places);
       } catch (err) {
         console.error("Destination search error:", err);
-
         if (err.response?.status === 401) {
           localStorage.removeItem("token");
           navigate("/login");
           return;
         }
-
         setSuggestions([]);
         setError("Unable to search destinations.");
       } finally {
@@ -105,19 +85,9 @@ function CreateTrip() {
     }, 400);
   };
 
-  // ==========================================
-  // SELECT DESTINATION
-  // ==========================================
-
   const handleSelectDestination = (place) => {
-    const name =
-      place?.displayName?.text ||
-      place?.displayName ||
-      "";
-
-    const address =
-      place?.formattedAddress ||
-      "";
+    const name = place?.displayName?.text || place?.displayName || "";
+    const address = place?.formattedAddress || "";
 
     setSelectedDestination({
       name,
@@ -130,31 +100,20 @@ function CreateTrip() {
     setError("");
   };
 
-  // ==========================================
-  // FORM CHANGE
-  // ==========================================
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // ==========================================
-  // CREATE TRIP
-  // ==========================================
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setError("");
 
-    // Destination validation
     if (!selectedDestination) {
-      setError("Please select a destination from the suggestions.");
+      setError("Please search and select a destination from the suggestions.");
       return;
     }
 
@@ -169,52 +128,28 @@ function CreateTrip() {
     }
 
     if (!form.travelers || Number(form.travelers) < 1) {
-      setError("Travelers must be at least 1.");
+      setError("Travelers count must be at least 1.");
       return;
     }
 
     if (!form.budget || Number(form.budget) < 0) {
-      setError("Please enter a valid budget.");
+      setError("Please enter a valid estimated budget.");
       return;
     }
 
     try {
       setSaving(true);
 
-      // ==========================================
-      // STEP 1:
-      // CREATE OR GET DESTINATION IN DATABASE
-      // ==========================================
-
-      console.log(
-        "SELECTED DESTINATION:",
-        selectedDestination
-      );
-
       const destinationResponse = await axios.post(
         "http://localhost:8080/api/destinations/create-or-get",
-        {
-          name: selectedDestination.name,
-        },
+        { name: selectedDestination.name },
         getAuthConfig()
       );
 
       const destination = destinationResponse.data;
 
-      console.log(
-        "DATABASE DESTINATION:",
-        destination
-      );
-
-      // ==========================================
-      // STEP 2:
-      // CREATE TRIP
-      // ==========================================
-
       const tripData = {
-        destination: {
-          id: destination.id,
-        },
+        destination: { id: destination.id },
         startDate: form.startDate,
         endDate: form.endDate,
         travelers: Number(form.travelers),
@@ -222,30 +157,20 @@ function CreateTrip() {
         status: form.status,
       };
 
-      console.log("CREATING TRIP:", tripData);
+      await axios.post("http://localhost:8080/api/trips", tripData, getAuthConfig());
 
-      await axios.post(
-        "http://localhost:8080/api/trips",
-        tripData,
-        getAuthConfig()
-      );
-
-      alert("Trip created successfully!");
-
+      alert("Trip created successfully! 🎉");
       navigate("/trips");
-
     } catch (err) {
       console.error("Error creating trip:", err);
-
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         navigate("/login");
         return;
       }
-
       setError(
         err.response?.data?.message ||
-          err.response?.data ||
+          (typeof err.response?.data === "string" ? err.response.data : null) ||
           "Unable to create trip. Please try again."
       );
     } finally {
@@ -253,163 +178,92 @@ function CreateTrip() {
     }
   };
 
-  // ==========================================
-  // UI
-  // ==========================================
-
   return (
     <div style={styles.page}>
+      <Navbar activePage="/trips" />
 
-      {/* Header */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.logo}>
-            TripNest
-          </h1>
-
-          <p style={styles.subtitle}>
-            Create a new trip
-          </p>
-        </div>
-
-        <button
-          style={styles.backButton}
-          onClick={() => navigate("/trips")}
-        >
-          ← My Trips
-        </button>
-      </header>
-
-      {/* Main */}
       <main style={styles.container}>
-
         <div style={styles.card}>
+          {/* Header */}
+          <div style={styles.header}>
+            <div style={styles.headerIcon}>✈️</div>
+            <div>
+              <h1 style={styles.title}>Create a New Trip</h1>
+              <p style={styles.subtitle}>
+                Start planning your next adventure by setting your destination, dates, and budget.
+              </p>
+            </div>
+          </div>
 
-          <h2 style={styles.title}>
-            Plan Your Trip 🧳
-          </h2>
-
-          <p style={styles.description}>
-            Enter your trip details below.
-          </p>
-
-          {/* Error */}
+          {/* Error Message */}
           {error && (
-            <div style={styles.error}>
-              {error}
+            <div style={styles.errorBox}>
+              ⚠️ {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
-
-            {/* ==========================================
-                DESTINATION
-            ========================================== */}
-
+            {/* DESTINATION SEARCH */}
             <div style={styles.formGroup}>
-
               <label style={styles.label}>
-                Destination
+                Search Destination <span style={styles.required}>*</span>
               </label>
 
               <div style={styles.searchContainer}>
-
                 <input
                   type="text"
                   value={destinationSearch}
-                  onChange={(e) =>
-                    searchDestinations(e.target.value)
-                  }
-                  placeholder="Search any city, place, hotel..."
+                  onChange={(e) => searchDestinations(e.target.value)}
+                  placeholder="Type city or place (e.g. Goa, Paris, Tokyo, Manali)"
                   style={styles.input}
                   autoComplete="off"
+                  required
                 />
-
                 {searchingDestinations && (
-                  <div style={styles.loadingText}>
-                    Searching...
-                  </div>
+                  <span style={styles.searchSpinner}>⏳</span>
                 )}
 
-                {/* Suggestions */}
+                {/* Suggestions Dropdown */}
                 {suggestions.length > 0 && (
-                  <div style={styles.suggestionsBox}>
-
+                  <div style={styles.dropdown}>
                     {suggestions.map((place, index) => {
-
                       const name =
-                        place?.displayName?.text ||
-                        place?.displayName ||
-                        "Unknown place";
-
-                      const address =
-                        place?.formattedAddress ||
-                        "";
+                        place?.displayName?.text || place?.displayName || "Unknown";
+                      const address = place?.formattedAddress || "";
 
                       return (
                         <div
-                          key={
-                            place?.id ||
-                            `${name}-${index}`
-                          }
-                          style={styles.suggestionItem}
-                          onClick={() =>
-                            handleSelectDestination(place)
-                          }
+                          key={place?.id || index}
+                          style={styles.dropdownItem}
+                          onClick={() => handleSelectDestination(place)}
                         >
-
-                          <div style={styles.placeName}>
-                            📍 {name}
-                          </div>
-
+                          <div style={styles.placeName}>📍 {name}</div>
                           {address && (
-                            <div style={styles.placeAddress}>
-                              {address}
-                            </div>
+                            <div style={styles.placeAddress}>{address}</div>
                           )}
-
                         </div>
                       );
                     })}
-
                   </div>
                 )}
-
               </div>
 
-              {/* Selected destination */}
               {selectedDestination && (
-                <div style={styles.selectedDestination}>
-
-                  <strong>
-                    ✓ Selected:
-                  </strong>{" "}
-
-                  {selectedDestination.name}
-
+                <div style={styles.selectedBadge}>
+                  ✅ Selected: <strong>{selectedDestination.name}</strong>
                   {selectedDestination.address && (
-                    <div style={styles.selectedAddress}>
-                      {selectedDestination.address}
-                    </div>
+                    <span style={styles.selectedAddr}> — {selectedDestination.address}</span>
                   )}
-
                 </div>
               )}
-
             </div>
 
-            {/* ==========================================
-                DATES
-            ========================================== */}
-
-            <div style={styles.row}>
-
+            {/* DATES GRID */}
+            <div style={styles.grid2Col}>
               <div style={styles.formGroup}>
-
                 <label style={styles.label}>
-                  Start Date
+                  Start Date <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="date"
                   name="startDate"
@@ -418,15 +272,12 @@ function CreateTrip() {
                   style={styles.input}
                   required
                 />
-
               </div>
 
               <div style={styles.formGroup}>
-
                 <label style={styles.label}>
-                  End Date
+                  End Date <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="date"
                   name="endDate"
@@ -435,324 +286,285 @@ function CreateTrip() {
                   style={styles.input}
                   required
                 />
-
               </div>
-
             </div>
 
-            {/* ==========================================
-                TRAVELERS + BUDGET
-            ========================================== */}
-
-            <div style={styles.row}>
-
+            {/* TRAVELERS & BUDGET GRID */}
+            <div style={styles.grid2Col}>
               <div style={styles.formGroup}>
-
                 <label style={styles.label}>
-                  Travelers
+                  Number of Travelers <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="number"
-                  name="travelers"
                   min="1"
+                  name="travelers"
                   value={form.travelers}
                   onChange={handleChange}
                   style={styles.input}
+                  placeholder="1"
                   required
                 />
-
               </div>
 
               <div style={styles.formGroup}>
-
                 <label style={styles.label}>
-                  Budget (₹)
+                  Total Estimated Budget (₹) <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="number"
-                  name="budget"
                   min="0"
-                  step="0.01"
+                  name="budget"
                   value={form.budget}
                   onChange={handleChange}
-                  placeholder="Enter budget"
                   style={styles.input}
+                  placeholder="e.g. 50000"
                   required
                 />
-
               </div>
-
             </div>
 
-            {/* ==========================================
-                STATUS
-            ========================================== */}
-
+            {/* STATUS */}
             <div style={styles.formGroup}>
-
-              <label style={styles.label}>
-                Status
-              </label>
-
+              <label style={styles.label}>Trip Status</label>
               <select
                 name="status"
                 value={form.status}
                 onChange={handleChange}
-                style={styles.input}
+                style={styles.select}
               >
-
-                <option value="PLANNED">
-                  Planned
-                </option>
-
-                <option value="ONGOING">
-                  Ongoing
-                </option>
-
-                <option value="COMPLETED">
-                  Completed
-                </option>
-
+                <option value="PLANNED">Planned (Upcoming)</option>
+                <option value="ACTIVE">Active (In Progress)</option>
+                <option value="COMPLETED">Completed (Past)</option>
               </select>
-
             </div>
 
-            {/* ==========================================
-                BUTTONS
-            ========================================== */}
-
+            {/* ACTION BUTTONS */}
             <div style={styles.actions}>
-
-              <button
-                type="button"
-                style={styles.cancelButton}
-                onClick={() => navigate("/trips")}
-                disabled={saving}
-              >
+              <Link to="/trips" style={styles.cancelBtn}>
                 Cancel
-              </button>
+              </Link>
 
               <button
                 type="submit"
-                style={styles.saveButton}
+                style={styles.submitBtn}
                 disabled={saving}
               >
-                {saving
-                  ? "Creating..."
-                  : "Create Trip"}
+                {saving ? "Creating Trip..." : "＋ Create Trip"}
               </button>
-
             </div>
-
           </form>
-
         </div>
-
       </main>
-
     </div>
   );
 }
 
-// ==========================================
-// STYLES
-// ==========================================
-
 const styles = {
-
   page: {
     minHeight: "100vh",
-    background: "#f5f7fb",
-    color: "#111827",
-  },
-
-  header: {
-    background: "#ffffff",
-    borderBottom: "1px solid #e5e7eb",
-    padding: "20px 5%",
+    background: "#f8fafc",
+    color: "#0f172a",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "20px",
-  },
-
-  logo: {
-    margin: 0,
-    fontSize: "30px",
-    fontWeight: "700",
-  },
-
-  subtitle: {
-    margin: "5px 0 0",
-    color: "#6b7280",
-  },
-
-  backButton: {
-    border: "1px solid #d1d5db",
-    background: "#ffffff",
-    color: "#111827",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
+    flexDirection: "column",
   },
 
   container: {
-    width: "100%",
-    maxWidth: "850px",
-    margin: "0 auto",
-    padding: "45px 25px",
-    boxSizing: "border-box",
+    maxWidth: "760px",
+    width: "92%",
+    margin: "36px auto 60px",
   },
 
   card: {
     background: "#ffffff",
-    borderRadius: "18px",
-    padding: "35px",
-    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.07)",
-    border: "1px solid #e5e7eb",
+    borderRadius: "20px",
+    border: "1px solid #e2e8f0",
+    padding: "36px 40px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+  },
+
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: "18px",
+    marginBottom: "28px",
+    paddingBottom: "24px",
+    borderBottom: "1px solid #f1f5f9",
+  },
+
+  headerIcon: {
+    fontSize: "36px",
+    width: "60px",
+    height: "60px",
+    borderRadius: "16px",
+    background: "#f0f9ff",
+    border: "1px solid #bae6fd",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
 
   title: {
-    margin: 0,
-    fontSize: "28px",
+    margin: "0 0 6px",
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0f172a",
   },
 
-  description: {
-    color: "#6b7280",
-    margin: "8px 0 30px",
+  subtitle: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#64748b",
+    lineHeight: "1.5",
+  },
+
+  errorBox: {
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    padding: "14px 18px",
+    borderRadius: "12px",
+    marginBottom: "22px",
+    fontSize: "14px",
+    fontWeight: "600",
   },
 
   formGroup: {
     marginBottom: "20px",
-    flex: 1,
   },
 
-  row: {
-    display: "flex",
+  grid2Col: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
     gap: "18px",
   },
 
   label: {
     display: "block",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#334155",
     marginBottom: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#374151",
   },
 
-  searchContainer: {
-    position: "relative",
-    width: "100%",
+  required: {
+    color: "#ef4444",
   },
 
   input: {
     width: "100%",
-    boxSizing: "border-box",
-    padding: "12px 13px",
-    border: "1px solid #d1d5db",
-    borderRadius: "9px",
-    background: "#ffffff",
-    color: "#111827",
-    fontSize: "15px",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
+    fontSize: "14px",
     outline: "none",
-  },
-
-  loadingText: {
-    position: "absolute",
-    right: "12px",
-    top: "12px",
-    color: "#6b7280",
-    fontSize: "13px",
     background: "#ffffff",
-    paddingLeft: "5px",
+    boxSizing: "border-box",
+    transition: "border-color 0.15s",
   },
 
-  suggestionsBox: {
+  select: {
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
+    fontSize: "14px",
+    outline: "none",
+    background: "#ffffff",
+    boxSizing: "border-box",
+  },
+
+  searchContainer: {
+    position: "relative",
+  },
+
+  searchSpinner: {
     position: "absolute",
-    top: "100%",
+    right: "14px",
+    top: "12px",
+    fontSize: "16px",
+  },
+
+  dropdown: {
+    position: "absolute",
+    top: "105%",
     left: 0,
     right: 0,
     background: "#ffffff",
-    border: "1px solid #d1d5db",
-    borderRadius: "0 0 10px 10px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-    zIndex: 1000,
-    maxHeight: "320px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "12px",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+    zIndex: 100,
+    maxHeight: "240px",
     overflowY: "auto",
   },
 
-  suggestionItem: {
-    padding: "13px 15px",
+  dropdownItem: {
+    padding: "12px 16px",
     cursor: "pointer",
-    borderBottom: "1px solid #f0f0f0",
-    background: "#ffffff",
+    borderBottom: "1px solid #f1f5f9",
+    transition: "background 0.15s",
   },
 
   placeName: {
-    fontSize: "15px",
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: "14px",
+    fontWeight: "700",
+    color: "#0f172a",
   },
 
   placeAddress: {
-    fontSize: "13px",
-    color: "#6b7280",
-    marginTop: "4px",
-    paddingLeft: "22px",
+    fontSize: "12px",
+    color: "#64748b",
+    marginTop: "2px",
   },
 
-  selectedDestination: {
+  selectedBadge: {
     marginTop: "10px",
-    padding: "11px 13px",
-    borderRadius: "8px",
+    padding: "8px 14px",
     background: "#ecfdf5",
-    color: "#065f46",
-    fontSize: "14px",
-  },
-
-  selectedAddress: {
-    marginTop: "4px",
-    color: "#047857",
-    fontSize: "13px",
-  },
-
-  error: {
-    background: "#fee2e2",
-    color: "#991b1b",
-    padding: "13px 15px",
+    border: "1px solid #a7f3d0",
     borderRadius: "8px",
-    marginBottom: "20px",
-    fontSize: "14px",
+    fontSize: "13px",
+    color: "#065f46",
+  },
+
+  selectedAddr: {
+    color: "#047857",
+    fontWeight: "400",
   },
 
   actions: {
     display: "flex",
     justifyContent: "flex-end",
+    alignItems: "center",
     gap: "12px",
     marginTop: "30px",
+    paddingTop: "20px",
+    borderTop: "1px solid #f1f5f9",
   },
 
-  cancelButton: {
-    border: "1px solid #d1d5db",
+  cancelBtn: {
+    padding: "11px 20px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
     background: "#ffffff",
-    color: "#111827",
-    padding: "12px 22px",
-    borderRadius: "8px",
-    cursor: "pointer",
+    color: "#475569",
+    fontSize: "14px",
     fontWeight: "600",
+    textDecoration: "none",
   },
 
-  saveButton: {
+  submitBtn: {
+    padding: "11px 26px",
+    borderRadius: "10px",
     border: "none",
-    background: "#111827",
+    background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
     color: "#ffffff",
-    padding: "12px 24px",
-    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "700",
     cursor: "pointer",
-    fontWeight: "600",
+    boxShadow: "0 2px 8px rgba(2, 132, 199, 0.25)",
   },
 };
 

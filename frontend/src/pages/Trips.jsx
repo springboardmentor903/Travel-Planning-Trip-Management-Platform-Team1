@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 function Trips() {
   const navigate = useNavigate();
@@ -8,6 +9,8 @@ function Trips() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   useEffect(() => {
     fetchTrips();
@@ -15,6 +18,8 @@ function Trips() {
 
   const fetchTrips = async () => {
     try {
+      setLoading(true);
+      setError("");
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -22,17 +27,13 @@ function Trips() {
         return;
       }
 
-      const response = await axios.get(
-        "http://localhost:8080/api/trips/my",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.get("http://localhost:8080/api/trips/my", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       console.log("TRIPS RESPONSE:", response.data);
-
       setTrips(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error("Error fetching trips:", err);
@@ -43,19 +44,18 @@ function Trips() {
         return;
       }
 
-      setError("Unable to load your trips.");
+      setError("Unable to load your trips. Please check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = (date) => {
-    if (!date) return "Not available";
-
-    return new Date(date).toLocaleDateString("en-IN", {
-      year: "numeric",
+    if (!date) return "TBD";
+    return new Date(date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -63,162 +63,185 @@ function Trips() {
     if (trip?.destination?.name) {
       return trip.destination.name;
     }
-
-    return "Unknown destination";
+    return "Dream Destination";
   };
 
-  if (loading) {
-    return (
-      <div style={styles.center}>
-        <h2>Loading your trips...</h2>
-      </div>
-    );
-  }
+  const getStatusBadgeStyle = (status) => {
+    switch (status?.toUpperCase()) {
+      case "ACTIVE":
+      case "IN_PROGRESS":
+        return { background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0" };
+      case "COMPLETED":
+        return { background: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1" };
+      case "PLANNED":
+      default:
+        return { background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" };
+    }
+  };
+
+  // Filtered trips
+  const filteredTrips = trips.filter((trip) => {
+    const destName = getDestinationName(trip).toLowerCase();
+    const matchesSearch = destName.includes(searchQuery.toLowerCase().trim());
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (trip.status && trip.status.toUpperCase() === statusFilter);
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div style={styles.page}>
-      {/* Header */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.logo}>TripNest</h1>
-          <p style={styles.subtitle}>My Trips</p>
-        </div>
-
-        <div style={styles.headerButtons}>
-          <button
-            style={styles.dashboardButton}
-            onClick={() => navigate("/dashboard")}
-          >
-            Dashboard
-          </button>
-
-          <button
-            style={styles.createButton}
-            onClick={() => navigate("/trips/create")}
-          >
-            + Create Trip
-          </button>
-        </div>
-      </header>
+      <Navbar activePage="/trips" />
 
       <main style={styles.container}>
-        {/* Page heading */}
-        <div style={styles.pageHeading}>
+        {/* Top Header */}
+        <div style={styles.headerRow}>
           <div>
-            <h2 style={styles.title}>Your Trips 🧳</h2>
-            <p style={styles.description}>
-              Manage and view all your planned trips.
+            <span style={styles.pageBadge}>🧳 TRIP COLLECTION</span>
+            <h1 style={styles.pageTitle}>My Trips</h1>
+            <p style={styles.pageSubtitle}>
+              Explore, manage, and collaborate on your planned and past travel itineraries.
             </p>
           </div>
 
-          <div style={styles.tripCount}>
-            {trips.length} {trips.length === 1 ? "Trip" : "Trips"}
+          <Link to="/trips/create" style={styles.createTripBtn}>
+            <span>＋</span>
+            <span>Plan New Trip</span>
+          </Link>
+        </div>
+
+        {/* Filter / Search Bar */}
+        <div style={styles.filterBar}>
+          <div style={styles.searchWrapper}>
+            <span style={styles.searchIcon}>🔍</span>
+            <input
+              type="text"
+              placeholder="Search by destination..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={styles.searchInput}
+            />
+          </div>
+
+          <div style={styles.statusButtonGroup}>
+            {["ALL", "PLANNED", "ACTIVE", "COMPLETED"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                style={{
+                  ...styles.statusTab,
+                  ...(statusFilter === status ? styles.statusTabActive : {}),
+                }}
+              >
+                {status.charAt(0) + status.slice(1).toLowerCase()}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Error */}
+        {/* Error Alert */}
         {error && (
           <div style={styles.errorBox}>
-            {error}
-
-            <button
-              style={styles.retryButton}
-              onClick={fetchTrips}
-            >
-              Try Again
+            <span>⚠️ {error}</span>
+            <button style={styles.retryBtn} onClick={fetchTrips}>
+              Retry
             </button>
           </div>
         )}
 
-        {/* Empty state */}
-        {!error && trips.length === 0 && (
-          <div style={styles.emptyCard}>
-            <div style={styles.emptyIcon}>🧳</div>
-
-            <h2>No trips yet</h2>
-
-            <p>
-              You haven't created any trips yet. Start planning your
-              next adventure!
-            </p>
-
-            <button
-              style={styles.createButton}
-              onClick={() => navigate("/trips/create")}
-            >
-              + Create Your First Trip
-            </button>
-          </div>
-        )}
-
-        {/* Trips */}
-        {!error && trips.length > 0 && (
-          <div style={styles.tripList}>
-            {trips.map((trip) => (
-              <div key={trip.id} style={styles.tripCard}>
-                {/* Top */}
-                <div style={styles.tripTop}>
-                  <div>
-                    <h3 style={styles.destination}>
-                      {getDestinationName(trip)}
-                    </h3>
-
-                    <p style={styles.date}>
-                      {formatDate(trip.startDate)} →{" "}
-                      {formatDate(trip.endDate)}
-                    </p>
-                  </div>
-
-                  <span style={styles.status}>
-                    {trip.status || "PLANNED"}
-                  </span>
-                </div>
-
-                {/* Details */}
-                <div style={styles.details}>
-                  <div style={styles.detailBox}>
-                    <span style={styles.detailLabel}>
-                      Travelers
-                    </span>
-
-                    <strong>
-                      {trip.travelers ?? "N/A"}
-                    </strong>
-                  </div>
-
-                  <div style={styles.detailBox}>
-                    <span style={styles.detailLabel}>
-                      Budget
-                    </span>
-
-                    <strong>
-                      ₹{trip.budget ?? "N/A"}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div style={styles.actions}>
-                  <button
-                    style={styles.viewButton}
-                    onClick={() =>
-                      navigate(`/trips/${trip.id}`)
-                    }
-                  >
-                    View Details
-                  </button>
-
-                  <button
-                    style={styles.editButton}
-                    onClick={() =>
-                      navigate(`/trips/${trip.id}/edit`)
-                    }
-                  >
-                    Edit
-                  </button>
-                </div>
+        {/* Content */}
+        {loading ? (
+          <div style={styles.grid}>
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} style={styles.skeletonCard}>
+                <div style={{ height: "180px", background: "#f1f5f9", borderRadius: "12px" }} />
+                <div style={{ height: "22px", background: "#f1f5f9", borderRadius: "4px", width: "65%", marginTop: "16px" }} />
+                <div style={{ height: "14px", background: "#f1f5f9", borderRadius: "4px", width: "45%", marginTop: "10px" }} />
               </div>
             ))}
+          </div>
+        ) : filteredTrips.length === 0 ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>✈️</div>
+            <h2 style={styles.emptyTitle}>
+              {searchQuery || statusFilter !== "ALL"
+                ? "No matching trips found"
+                : "No trips created yet"}
+            </h2>
+            <p style={styles.emptyDesc}>
+              {searchQuery || statusFilter !== "ALL"
+                ? "Try adjusting your search terms or filters to find what you are looking for."
+                : "Start organizing your upcoming adventures, day-by-day itineraries, and group expenses."}
+            </p>
+            <Link to="/trips/create" style={styles.emptyActionBtn}>
+              ＋ Create a Trip
+            </Link>
+          </div>
+        ) : (
+          <div style={styles.grid}>
+            {filteredTrips.map((trip) => {
+              const destName = getDestinationName(trip);
+              const imageUrl = "/images/tripImage.png";
+
+              return (
+                <div key={trip.id} style={styles.card} className="trip-card-hover">
+                  <div style={styles.imageBox}>
+                    <img src={imageUrl} alt={destName} style={styles.image} />
+                    <span
+                      style={{
+                        ...styles.statusBadge,
+                        ...getStatusBadgeStyle(trip.status),
+                      }}
+                    >
+                      {trip.status || "PLANNED"}
+                    </span>
+                  </div>
+
+                  <div style={styles.cardContent}>
+                    <h3 style={styles.cardTitle}>{destName}</h3>
+
+                    <div style={styles.metaRow}>
+                      <span style={styles.metaIcon}>📅</span>
+                      <span>
+                        {formatDate(trip.startDate)} → {formatDate(trip.endDate)}
+                      </span>
+                    </div>
+
+                    <div style={styles.infoPillsRow}>
+                      <div style={styles.pill}>
+                        <span style={styles.pillLabel}>Travelers</span>
+                        <strong>{trip.travelers || 1}</strong>
+                      </div>
+
+                      <div style={styles.pill}>
+                        <span style={styles.pillLabel}>Budget</span>
+                        <strong>
+                          {trip.budget ? `₹${Number(trip.budget).toLocaleString()}` : "Not Set"}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div style={styles.cardActions}>
+                      <button
+                        style={styles.viewBtn}
+                        onClick={() => navigate(`/trips/${trip.id}`)}
+                      >
+                        View Details →
+                      </button>
+
+                      <button
+                        style={styles.editBtn}
+                        onClick={() => navigate(`/trips/${trip.id}/edit`)}
+                        title="Edit Trip Settings"
+                      >
+                        ✏️ Edit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
@@ -229,212 +252,317 @@ function Trips() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f5f7fb",
-    color: "#111827",
-  },
-
-  header: {
-    background: "#ffffff",
-    borderBottom: "1px solid #e5e7eb",
-    padding: "20px 5%",
+    background: "#f8fafc",
+    color: "#0f172a",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "20px",
-  },
-
-  logo: {
-    margin: 0,
-    fontSize: "30px",
-    fontWeight: "700",
-  },
-
-  subtitle: {
-    margin: "5px 0 0",
-    color: "#6b7280",
-  },
-
-  headerButtons: {
-    display: "flex",
-    gap: "10px",
-    alignItems: "center",
-  },
-
-  dashboardButton: {
-    border: "1px solid #d1d5db",
-    background: "#ffffff",
-    color: "#111827",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-
-  createButton: {
-    border: "none",
-    background: "#111827",
-    color: "#ffffff",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
+    flexDirection: "column",
   },
 
   container: {
-    width: "100%",
-    maxWidth: "1000px",
+    maxWidth: "1240px",
+    width: "92%",
     margin: "0 auto",
-    padding: "40px 25px",
+    padding: "36px 0 60px",
   },
 
-  pageHeading: {
+  headerRow: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "25px",
-    gap: "20px",
-  },
-
-  title: {
-    margin: 0,
-    fontSize: "30px",
-  },
-
-  description: {
-    color: "#6b7280",
-    marginTop: "7px",
-  },
-
-  tripCount: {
-    background: "#e5e7eb",
-    padding: "10px 16px",
-    borderRadius: "20px",
-    fontWeight: "600",
-  },
-
-  tripList: {
-    display: "flex",
-    flexDirection: "column",
+    alignItems: "flex-end",
+    marginBottom: "28px",
+    flexWrap: "wrap",
     gap: "18px",
   },
 
-  tripCard: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "25px",
-    boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+  pageBadge: {
+    display: "inline-block",
+    color: "#0284c7",
+    fontWeight: "800",
+    fontSize: "12px",
+    letterSpacing: "1.2px",
+    marginBottom: "6px",
   },
 
-  tripTop: {
+  pageTitle: {
+    margin: "0 0 6px",
+    fontSize: "32px",
+    fontWeight: "800",
+    letterSpacing: "-0.5px",
+    color: "#0f172a",
+  },
+
+  pageSubtitle: {
+    margin: 0,
+    fontSize: "15px",
+    color: "#64748b",
+  },
+
+  createTripBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#0284c7",
+    color: "#ffffff",
+    padding: "12px 24px",
+    borderRadius: "10px",
+    fontWeight: "700",
+    fontSize: "14px",
+    textDecoration: "none",
+    boxShadow: "0 4px 12px rgba(2, 132, 199, 0.25)",
+    transition: "transform 0.15s, background 0.15s",
+  },
+
+  filterBar: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "20px",
+    alignItems: "center",
+    gap: "16px",
+    marginBottom: "32px",
+    flexWrap: "wrap",
   },
 
-  destination: {
-    margin: 0,
-    fontSize: "24px",
+  searchWrapper: {
+    display: "flex",
+    alignItems: "center",
+    background: "#ffffff",
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "0 14px",
+    width: "320px",
+    maxWidth: "100%",
   },
 
-  date: {
-    color: "#6b7280",
-    marginTop: "8px",
+  searchIcon: {
+    fontSize: "14px",
+    color: "#94a3b8",
+    marginRight: "8px",
   },
 
-  status: {
-    background: "#e5e7eb",
-    padding: "9px 14px",
-    borderRadius: "20px",
+  searchInput: {
+    border: "none",
+    outline: "none",
+    padding: "11px 0",
+    width: "100%",
+    fontSize: "14px",
+    background: "transparent",
+  },
+
+  statusButtonGroup: {
+    display: "flex",
+    gap: "6px",
+    background: "#ffffff",
+    padding: "4px",
+    borderRadius: "10px",
+    border: "1px solid #e2e8f0",
+  },
+
+  statusTab: {
+    padding: "8px 14px",
+    borderRadius: "8px",
+    border: "none",
+    background: "transparent",
+    color: "#64748b",
     fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+
+  statusTabActive: {
+    background: "#0284c7",
+    color: "#ffffff",
     fontWeight: "700",
   },
 
-  details: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "15px",
-    marginTop: "22px",
-  },
-
-  detailBox: {
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    padding: "15px",
+  errorBox: {
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    padding: "14px 18px",
+    borderRadius: "12px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: "24px",
   },
 
-  detailLabel: {
-    color: "#6b7280",
-  },
-
-  actions: {
-    display: "flex",
-    gap: "10px",
-    marginTop: "20px",
-  },
-
-  viewButton: {
-    border: "none",
-    background: "#111827",
+  retryBtn: {
+    background: "#b91c1c",
     color: "#ffffff",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
+    padding: "6px 14px",
+    borderRadius: "6px",
+    fontSize: "12px",
     fontWeight: "600",
   },
 
-  editButton: {
-    border: "1px solid #d1d5db",
-    background: "#ffffff",
-    color: "#111827",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: "24px",
   },
 
-  emptyCard: {
+  card: {
     background: "#ffffff",
     borderRadius: "16px",
-    padding: "60px 30px",
+    border: "1px solid #e2e8f0",
+    overflow: "hidden",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+    display: "flex",
+    flexDirection: "column",
+  },
+
+  imageBox: {
+    position: "relative",
+    height: "180px",
+    width: "100%",
+  },
+
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+
+  statusBadge: {
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    padding: "4px 10px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "800",
+    letterSpacing: "0.5px",
+    backdropFilter: "blur(4px)",
+  },
+
+  cardContent: {
+    padding: "20px",
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    justifyContent: "space-between",
+  },
+
+  cardTitle: {
+    margin: "0 0 8px",
+    fontSize: "20px",
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+
+  metaRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "13px",
+    color: "#64748b",
+    marginBottom: "16px",
+  },
+
+  metaIcon: {
+    fontSize: "14px",
+  },
+
+  infoPillsRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px",
+    marginBottom: "18px",
+  },
+
+  pill: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+    padding: "10px 12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+
+  pillLabel: {
+    fontSize: "11px",
+    color: "#94a3b8",
+    fontWeight: "600",
+  },
+
+  cardActions: {
+    display: "flex",
+    gap: "10px",
+    paddingTop: "14px",
+    borderTop: "1px solid #f1f5f9",
+  },
+
+  viewBtn: {
+    flex: 1,
+    background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+    color: "#ffffff",
+    border: "none",
+    padding: "10px 16px",
+    borderRadius: "9px",
+    fontSize: "13px",
+    fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 2px 6px rgba(2, 132, 199, 0.2)",
+  },
+
+  editBtn: {
+    background: "#ffffff",
+    color: "#475569",
+    border: "1px solid #cbd5e1",
+    padding: "10px 14px",
+    borderRadius: "9px",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
+
+  emptyState: {
+    background: "#ffffff",
+    border: "2px dashed #cbd5e1",
+    borderRadius: "20px",
+    padding: "60px 24px",
     textAlign: "center",
-    border: "1px solid #e5e7eb",
+    maxWidth: "540px",
+    margin: "40px auto 0",
   },
 
   emptyIcon: {
-    fontSize: "55px",
+    fontSize: "52px",
+    marginBottom: "16px",
   },
 
-  errorBox: {
-    background: "#fee2e2",
-    color: "#991b1b",
-    padding: "18px",
-    borderRadius: "10px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "15px",
+  emptyTitle: {
+    margin: "0 0 8px",
+    fontSize: "22px",
+    fontWeight: "700",
+    color: "#0f172a",
   },
 
-  retryButton: {
-    border: "none",
-    background: "#991b1b",
+  emptyDesc: {
+    fontSize: "15px",
+    color: "#64748b",
+    marginBottom: "24px",
+    lineHeight: "1.5",
+  },
+
+  emptyActionBtn: {
+    display: "inline-block",
+    background: "#0284c7",
     color: "#ffffff",
-    padding: "9px 15px",
-    borderRadius: "7px",
-    cursor: "pointer",
+    padding: "12px 26px",
+    borderRadius: "10px",
+    fontWeight: "700",
+    fontSize: "14px",
+    textDecoration: "none",
+    boxShadow: "0 4px 12px rgba(2, 132, 199, 0.25)",
   },
 
-  center: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
+  skeletonCard: {
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "16px",
+    padding: "16px",
   },
 };
 

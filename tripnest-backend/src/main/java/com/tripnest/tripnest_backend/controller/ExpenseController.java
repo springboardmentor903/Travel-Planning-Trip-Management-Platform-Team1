@@ -1,9 +1,12 @@
 package com.tripnest.tripnest_backend.controller;
 
 import com.tripnest.tripnest_backend.entity.Expense;
+import com.tripnest.tripnest_backend.entity.User;
+import com.tripnest.tripnest_backend.repository.UserRepository;
 import com.tripnest.tripnest_backend.service.ExpenseService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -15,13 +18,23 @@ import java.util.List;
 public class ExpenseController {
 
     private final ExpenseService expenseService;
+    private final UserRepository userRepository;
 
     public ExpenseController(
-            ExpenseService expenseService) {
+            ExpenseService expenseService,
+            UserRepository userRepository) {
 
         this.expenseService = expenseService;
+        this.userRepository = userRepository;
     }
 
+    private User getCurrentUser(Authentication authentication) {
+
+        return userRepository
+                .findByEmail(authentication.getName())
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+    }
 
     // =====================================================
     // CREATE EXPENSE
@@ -29,16 +42,21 @@ public class ExpenseController {
 
     @PostMapping
     public ResponseEntity<Expense> createExpense(
-            @RequestBody Expense expense) {
+            @RequestBody Expense expense,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         Expense createdExpense =
-                expenseService.createExpense(expense);
+                expenseService.createExpense(
+                        expense,
+                        currentUser
+                );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(createdExpense);
     }
-
 
     // =====================================================
     // LIST EXPENSES
@@ -46,15 +64,18 @@ public class ExpenseController {
 
     @GetMapping("/trip/{tripId}")
     public ResponseEntity<List<Expense>> getExpenses(
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         return ResponseEntity.ok(
                 expenseService.getExpensesByTripId(
-                        tripId
+                        tripId,
+                        currentUser
                 )
         );
     }
-
 
     // =====================================================
     // GET SINGLE EXPENSE
@@ -63,16 +84,19 @@ public class ExpenseController {
     @GetMapping("/{expenseId}/trip/{tripId}")
     public ResponseEntity<Expense> getExpense(
             @PathVariable Long expenseId,
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         return ResponseEntity.ok(
                 expenseService.getExpense(
                         tripId,
-                        expenseId
+                        expenseId,
+                        currentUser
                 )
         );
     }
-
 
     // =====================================================
     // UPDATE EXPENSE
@@ -82,17 +106,20 @@ public class ExpenseController {
     public ResponseEntity<Expense> updateExpense(
             @PathVariable Long expenseId,
             @PathVariable Long tripId,
-            @RequestBody Expense expense) {
+            @RequestBody Expense expense,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         return ResponseEntity.ok(
                 expenseService.updateExpense(
                         tripId,
                         expenseId,
-                        expense
+                        expense,
+                        currentUser
                 )
         );
     }
-
 
     // =====================================================
     // DELETE EXPENSE
@@ -101,16 +128,19 @@ public class ExpenseController {
     @DeleteMapping("/{expenseId}/trip/{tripId}")
     public ResponseEntity<Void> deleteExpense(
             @PathVariable Long expenseId,
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         expenseService.deleteExpense(
                 tripId,
-                expenseId
+                expenseId,
+                currentUser
         );
 
         return ResponseEntity.noContent().build();
     }
-
 
     // =====================================================
     // CATEGORY SUMMARY
@@ -118,15 +148,18 @@ public class ExpenseController {
 
     @GetMapping("/trip/{tripId}/category-summary")
     public ResponseEntity<List<Object[]>> categorySummary(
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         return ResponseEntity.ok(
                 expenseService.getCategorySummary(
-                        tripId
+                        tripId,
+                        currentUser
                 )
         );
     }
-
 
     // =====================================================
     // TOTAL EXPENSE
@@ -134,15 +167,18 @@ public class ExpenseController {
 
     @GetMapping("/trip/{tripId}/total")
     public ResponseEntity<BigDecimal> totalExpenses(
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         return ResponseEntity.ok(
                 expenseService.getTotalExpenses(
-                        tripId
+                        tripId,
+                        currentUser
                 )
         );
     }
-
 
     // =====================================================
     // REMAINING BUDGET
@@ -150,11 +186,15 @@ public class ExpenseController {
 
     @GetMapping("/trip/{tripId}/remaining-budget")
     public ResponseEntity<BigDecimal> remainingBudget(
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         return ResponseEntity.ok(
                 expenseService.getRemainingBudget(
-                        tripId
+                        tripId,
+                        currentUser
                 )
         );
     }

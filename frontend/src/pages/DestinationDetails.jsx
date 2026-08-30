@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 function DestinationDetails() {
   const navigate = useNavigate();
@@ -21,7 +22,6 @@ function DestinationDetails() {
 
   const getAuthConfig = () => {
     const token = localStorage.getItem("token");
-
     return token
       ? {
           headers: {
@@ -38,14 +38,11 @@ function DestinationDetails() {
 
       let destinationName = destination?.name;
 
-      // If destination name is not available from state,
-      // fetch it from backend using database ID.
       if (!destinationName && id) {
         const response = await axios.get(
           `http://localhost:8080/api/destinations/${id}`,
           getAuthConfig()
         );
-
         destinationName = response.data?.name;
         setDestination(response.data);
       }
@@ -55,12 +52,6 @@ function DestinationDetails() {
         return;
       }
 
-      console.log(
-        "Searching tourist places for:",
-        destinationName
-      );
-
-      // Search Google Places for tourist attractions
       const response = await axios.get(
         "http://localhost:8080/api/destinations/search",
         {
@@ -71,27 +62,16 @@ function DestinationDetails() {
         }
       );
 
-      console.log(
-        "TOURIST PLACES:",
-        response.data
-      );
-
+      console.log("TOURIST PLACES:", response.data);
       setPlaces(response.data?.places || []);
     } catch (err) {
-      console.error(
-        "Error loading destination places:",
-        err
-      );
-
+      console.error("Error loading destination places:", err);
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         navigate("/login");
         return;
       }
-
-      setError(
-        "Unable to load places for this destination."
-      );
+      setError("Unable to load tourist attractions for this destination.");
     } finally {
       setLoading(false);
     }
@@ -99,410 +79,366 @@ function DestinationDetails() {
 
   const handlePlaceClick = (place) => {
     if (!place?.id) return;
-
-    navigate(
-      `/destination-details/${encodeURIComponent(place.id)}`,
-      {
-        state: {
-          place,
-        },
-      }
-    );
+    navigate(`/destination-details/${encodeURIComponent(place.id)}`, {
+      state: { place },
+    });
   };
+
+  const destinationName = destination?.name || "Destination";
 
   return (
     <div style={styles.page}>
+      <Navbar activePage="/destinations" />
 
-      {/* Header */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.logo}>TripNest</h1>
-
-          <p style={styles.subtitle}>
-            Explore places around the world
-          </p>
-        </div>
-
-        <button
-          style={styles.backButton}
-          onClick={() => navigate("/destinations")}
-        >
-          ← Destinations
-        </button>
-      </header>
-
-
-      {/* Main */}
       <main style={styles.container}>
-
-        {/* Destination Header */}
-        <div style={styles.hero}>
-
-          <div style={styles.heroIcon}>
-            📍
-          </div>
-
-          <h2 style={styles.title}>
-            {destination?.name || "Destination"}
-          </h2>
-
-          <p style={styles.description}>
-            Discover the best places to visit and explore
-            in {destination?.name || "this destination"}.
-          </p>
-
-        </div>
-
-
-        {/* Loading */}
-        {loading && (
-          <div style={styles.loading}>
-            <div style={styles.loadingIcon}>
-              🌍
-            </div>
-
-            <h3>
-              Finding places to visit...
-            </h3>
-
-            <p>
-              Searching Google Places for the best
-              attractions.
+        {/* Destination Header Banner */}
+        <section style={styles.hero}>
+          <div style={styles.heroTop}>
+            <span style={styles.heroBadge}>📍 DESTINATION GUIDE</span>
+            <h1 style={styles.heroTitle}>{destinationName}</h1>
+            <p style={styles.heroDescription}>
+              Discover top-rated sights, attractions, and cultural landmarks to explore in {destinationName}.
             </p>
           </div>
-        )}
 
+          <div style={styles.heroActions}>
+            <Link to="/trips/create" style={styles.planTripBtn}>
+              <span>＋</span>
+              <span>Plan Trip to {destinationName}</span>
+            </Link>
 
-        {/* Error */}
-        {!loading && error && (
-          <div style={styles.error}>
-            {error}
+            <Link to="/destinations" style={styles.backBtn}>
+              ← Back to Destinations
+            </Link>
+          </div>
+        </section>
+
+        {/* Error Alert */}
+        {error && <div style={styles.errorAlert}>⚠️ {error}</div>}
+
+        {/* Loading State */}
+        {loading && (
+          <div style={styles.loadingBox}>
+            <div style={styles.loadingEmoji}>🌍</div>
+            <h3>Finding top attractions...</h3>
+            <p>Searching Google Places for the best highlights in {destinationName}.</p>
           </div>
         )}
 
-
-        {/* Places */}
-        {!loading && !error && places.length > 0 && (
-          <section style={styles.section}>
-
-            <div style={styles.sectionHeader}>
-
+        {/* Places Grid */}
+        {!loading && !error && (
+          <section style={styles.placesSection}>
+            <div style={styles.sectionHeaderRow}>
               <div>
-                <h2 style={styles.sectionTitle}>
-                  Places to Visit 🗺️
-                </h2>
-
+                <h2 style={styles.sectionTitle}>Top Places & Sights to Visit 🏛️</h2>
                 <p style={styles.sectionSubtitle}>
-                  Popular attractions and places you
-                  can explore.
+                  Recommended tourist attractions and highlights
                 </p>
               </div>
 
-              <span style={styles.count}>
-                {places.length} places
+              <span style={styles.placesCountBadge}>
+                {places.length} Attractions Found
               </span>
-
             </div>
 
+            {places.length === 0 ? (
+              <div style={styles.emptyBox}>
+                <p>No specific tourist spots returned. Try exploring related destinations.</p>
+              </div>
+            ) : (
+              <div style={styles.placesGrid}>
+                {places.map((place, idx) => {
+                  const name =
+                    place.displayName?.text || place.displayName || "Attraction";
+                  const address =
+                    place.formattedAddress || "Address details available in guide";
+                  const rating = place.rating;
+                  const reviewCount = place.userRatingCount;
 
-            <div style={styles.grid}>
+                  return (
+                    <div
+                      key={place.id || idx}
+                      style={styles.card}
+                      className="trip-card-hover"
+                      onClick={() => handlePlaceClick(place)}
+                    >
+                      <div style={styles.cardIconBox}>🏛️</div>
 
-              {places.map((place) => (
+                      <div style={styles.cardBody}>
+                        <h3 style={styles.placeName}>{name}</h3>
+                        <p style={styles.address}>{address}</p>
 
-                <div
-                  key={place.id}
-                  style={styles.card}
-                  onClick={() => handlePlaceClick(place)}
-                >
-
-                  <div style={styles.cardImage}>
-                    📍
-                  </div>
-
-                  <div style={styles.cardContent}>
-
-                    <h3 style={styles.placeName}>
-                      {place.displayName?.text ||
-                        "Unknown Place"}
-                    </h3>
-
-                    <p style={styles.address}>
-                      {place.formattedAddress ||
-                        "Address not available"}
-                    </p>
-
-                    {place.rating && (
-                      <div style={styles.rating}>
-                        ⭐ {place.rating}
-
-                        {place.userRatingCount && (
-                          <span>
-                            {" "}
-                            ({place.userRatingCount} reviews)
-                          </span>
+                        {rating && (
+                          <div style={styles.ratingRow}>
+                            <span style={styles.ratingBadge}>⭐ {rating}</span>
+                            {reviewCount && (
+                              <span style={styles.reviewText}>
+                                ({reviewCount.toLocaleString()} ratings)
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
 
-                    <button
-                      style={styles.viewButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlaceClick(place);
-                      }}
-                    >
-                      View Details →
-                    </button>
-
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
-
+                      <div style={styles.cardFooter}>
+                        <button style={styles.exploreBtn}>
+                          Explore Sight →
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
-
-
-        {/* No places */}
-        {!loading &&
-          !error &&
-          places.length === 0 && (
-            <div style={styles.empty}>
-
-              <div style={styles.emptyIcon}>
-                🔍
-              </div>
-
-              <h3>
-                No places found
-              </h3>
-
-              <p>
-                We couldn't find tourist attractions
-                for this destination.
-              </p>
-
-              <button
-                style={styles.backToDestinations}
-                onClick={() =>
-                  navigate("/destinations")
-                }
-              >
-                ← Explore Other Destinations
-              </button>
-
-            </div>
-          )}
-
       </main>
     </div>
   );
 }
 
-
 const styles = {
-
   page: {
     minHeight: "100vh",
-    background: "#f5f7fb",
-    color: "#111827",
-  },
-
-  header: {
-    padding: "20px 6%",
-    background: "#ffffff",
-    borderBottom: "1px solid #e5e7eb",
+    background: "#f8fafc",
+    color: "#0f172a",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  logo: {
-    margin: 0,
-    fontSize: "30px",
-    fontWeight: "700",
-  },
-
-  subtitle: {
-    margin: "5px 0 0",
-    color: "#6b7280",
-  },
-
-  backButton: {
-    border: "1px solid #d1d5db",
-    background: "#ffffff",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "15px",
+    flexDirection: "column",
   },
 
   container: {
-    maxWidth: "1100px",
+    maxWidth: "1240px",
+    width: "92%",
     margin: "0 auto",
-    padding: "45px 25px",
+    padding: "36px 0 60px",
   },
 
   hero: {
-    textAlign: "center",
-    marginBottom: "40px",
-  },
-
-  heroIcon: {
-    fontSize: "55px",
-    marginBottom: "10px",
-  },
-
-  title: {
-    margin: 0,
-    fontSize: "38px",
-  },
-
-  description: {
-    color: "#6b7280",
-    fontSize: "17px",
-    marginTop: "10px",
-  },
-
-  section: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "28px",
-    boxShadow: "0 5px 18px rgba(0,0,0,0.04)",
-  },
-
-  sectionHeader: {
+    background: "linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)",
+    borderRadius: "20px",
+    padding: "40px",
+    color: "#ffffff",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "25px",
+    marginBottom: "36px",
+    boxShadow: "0 10px 25px rgba(3, 105, 161, 0.15)",
+    flexWrap: "wrap",
+    gap: "24px",
+  },
+
+  heroTop: {
+    maxWidth: "640px",
+  },
+
+  heroBadge: {
+    display: "inline-block",
+    background: "rgba(255, 255, 255, 0.15)",
+    padding: "4px 12px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "800",
+    letterSpacing: "1px",
+    marginBottom: "10px",
+  },
+
+  heroTitle: {
+    margin: "0 0 10px",
+    fontSize: "clamp(26px, 4vw, 38px)",
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+
+  heroDescription: {
+    margin: 0,
+    fontSize: "15px",
+    color: "#e0f2fe",
+    lineHeight: "1.5",
+  },
+
+  heroActions: {
+    display: "flex",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
+
+  planTripBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    background: "#ffffff",
+    color: "#0284c7",
+    padding: "12px 22px",
+    borderRadius: "10px",
+    fontWeight: "700",
+    fontSize: "14px",
+    textDecoration: "none",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  },
+
+  backBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    background: "rgba(255, 255, 255, 0.15)",
+    color: "#ffffff",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    fontWeight: "600",
+    fontSize: "14px",
+    textDecoration: "none",
+  },
+
+  errorAlert: {
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    padding: "14px 18px",
+    borderRadius: "12px",
+    marginBottom: "24px",
+    fontWeight: "600",
+  },
+
+  loadingBox: {
+    padding: "70px 20px",
+    textAlign: "center",
+    color: "#64748b",
+  },
+
+  loadingEmoji: {
+    fontSize: "44px",
+    marginBottom: "12px",
+  },
+
+  placesSection: {
+    marginTop: "10px",
+  },
+
+  sectionHeaderRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: "24px",
+    flexWrap: "wrap",
+    gap: "14px",
   },
 
   sectionTitle: {
     margin: 0,
-    fontSize: "26px",
+    fontSize: "22px",
+    fontWeight: "800",
+    color: "#0f172a",
   },
 
   sectionSubtitle: {
-    margin: "7px 0 0",
-    color: "#6b7280",
-  },
-
-  count: {
-    background: "#f3f4f6",
-    padding: "8px 14px",
-    borderRadius: "20px",
+    margin: "4px 0 0",
     fontSize: "14px",
-    fontWeight: "600",
+    color: "#64748b",
   },
 
-  grid: {
+  placesCountBadge: {
+    background: "#e0f2fe",
+    color: "#0284c7",
+    padding: "4px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "700",
+  },
+
+  placesGrid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "20px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: "24px",
   },
 
   card: {
     background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    overflow: "hidden",
+    border: "1px solid #e2e8f0",
+    borderRadius: "16px",
+    padding: "22px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    gap: "16px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
     cursor: "pointer",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
-    transition: "transform 0.2s",
   },
 
-  cardImage: {
-    height: "130px",
-    background: "#eef2ff",
+  cardIconBox: {
+    width: "48px",
+    height: "48px",
+    borderRadius: "12px",
+    background: "#f0f9ff",
+    fontSize: "24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "50px",
   },
 
-  cardContent: {
-    padding: "20px",
+  cardBody: {
+    flex: 1,
   },
 
   placeName: {
-    margin: "0 0 10px",
-    fontSize: "20px",
+    margin: "0 0 6px",
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#0f172a",
   },
 
   address: {
-    color: "#6b7280",
-    lineHeight: "1.5",
-    minHeight: "45px",
-    fontSize: "14px",
+    margin: 0,
+    fontSize: "13px",
+    color: "#64748b",
+    lineHeight: "1.4",
   },
 
-  rating: {
-    marginTop: "14px",
-    fontWeight: "600",
-    fontSize: "14px",
+  ratingRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "10px",
   },
 
-  viewButton: {
-    marginTop: "16px",
-    border: "none",
-    background: "#111827",
-    color: "#ffffff",
-    padding: "10px 16px",
+  ratingBadge: {
+    background: "#fffbeb",
+    color: "#b45309",
+    padding: "3px 8px",
+    borderRadius: "6px",
+    fontSize: "12px",
+    fontWeight: "700",
+  },
+
+  reviewText: {
+    fontSize: "12px",
+    color: "#94a3b8",
+  },
+
+  cardFooter: {
+    borderTop: "1px solid #f1f5f9",
+    paddingTop: "14px",
+  },
+
+  exploreBtn: {
+    background: "#f0f9ff",
+    color: "#0284c7",
+    border: "1px solid #bae6fd",
+    padding: "8px 14px",
     borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: "700",
     cursor: "pointer",
-    fontWeight: "600",
+    width: "100%",
+    textAlign: "center",
   },
 
-  loading: {
+  emptyBox: {
+    padding: "40px",
     background: "#ffffff",
-    border: "1px solid #e5e7eb",
+    border: "1px solid #e2e8f0",
     borderRadius: "16px",
-    padding: "60px 20px",
     textAlign: "center",
-  },
-
-  loadingIcon: {
-    fontSize: "55px",
-    marginBottom: "10px",
-  },
-
-  error: {
-    background: "#fee2e2",
-    color: "#b91c1c",
-    padding: "15px",
-    borderRadius: "8px",
-    textAlign: "center",
-  },
-
-  empty: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "60px 20px",
-    textAlign: "center",
-  },
-
-  emptyIcon: {
-    fontSize: "55px",
-    marginBottom: "15px",
-  },
-
-  backToDestinations: {
-    marginTop: "20px",
-    border: "none",
-    background: "#111827",
-    color: "#ffffff",
-    padding: "12px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
+    color: "#64748b",
   },
 };
 

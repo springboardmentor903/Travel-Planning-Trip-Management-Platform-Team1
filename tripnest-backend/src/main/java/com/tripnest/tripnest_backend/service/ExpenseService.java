@@ -2,6 +2,7 @@ package com.tripnest.tripnest_backend.service;
 
 import com.tripnest.tripnest_backend.entity.Expense;
 import com.tripnest.tripnest_backend.entity.Budget;
+import com.tripnest.tripnest_backend.entity.User;
 import com.tripnest.tripnest_backend.repository.ExpenseRepository;
 import com.tripnest.tripnest_backend.repository.BudgetRepository;
 import org.springframework.stereotype.Service;
@@ -15,25 +16,33 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final BudgetRepository budgetRepository;
+    private final TripAccessService tripAccessService;
 
     public ExpenseService(
             ExpenseRepository expenseRepository,
-            BudgetRepository budgetRepository) {
+            BudgetRepository budgetRepository,
+            TripAccessService tripAccessService) {
 
         this.expenseRepository = expenseRepository;
         this.budgetRepository = budgetRepository;
+        this.tripAccessService = tripAccessService;
     }
-
 
     // =====================================================
     // CREATE EXPENSE
     // =====================================================
 
-    public Expense createExpense(Expense expense) {
+    public Expense createExpense(
+            Expense expense,
+            User currentUser) {
 
         validateExpense(expense);
 
-        // Check that budget belongs to the trip
+        tripAccessService.checkAccess(
+                expense.getTripId(),
+                currentUser
+        );
+
         Budget budget = budgetRepository
                 .findByTripId(expense.getTripId())
                 .orElseThrow(() ->
@@ -51,16 +60,21 @@ public class ExpenseService {
         return expenseRepository.save(expense);
     }
 
-
     // =====================================================
     // GET ALL EXPENSES
     // =====================================================
 
-    public List<Expense> getExpensesByTripId(Long tripId) {
+    public List<Expense> getExpensesByTripId(
+            Long tripId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
 
         return expenseRepository.findByTripId(tripId);
     }
-
 
     // =====================================================
     // GET SINGLE EXPENSE
@@ -68,7 +82,13 @@ public class ExpenseService {
 
     public Expense getExpense(
             Long tripId,
-            Long expenseId) {
+            Long expenseId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
 
         return expenseRepository
                 .findByIdAndTripId(expenseId, tripId)
@@ -79,7 +99,6 @@ public class ExpenseService {
                 );
     }
 
-
     // =====================================================
     // UPDATE EXPENSE
     // =====================================================
@@ -87,7 +106,13 @@ public class ExpenseService {
     public Expense updateExpense(
             Long tripId,
             Long expenseId,
-            Expense updatedExpense) {
+            Expense updatedExpense,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
 
         validateExpense(updatedExpense);
 
@@ -103,7 +128,6 @@ public class ExpenseService {
                                 )
                         );
 
-        // Make sure budget belongs to trip
         Budget budget = budgetRepository
                 .findByTripId(tripId)
                 .orElseThrow(() ->
@@ -145,14 +169,19 @@ public class ExpenseService {
         return expenseRepository.save(existingExpense);
     }
 
-
     // =====================================================
     // DELETE EXPENSE
     // =====================================================
 
     public void deleteExpense(
             Long tripId,
-            Long expenseId) {
+            Long expenseId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
 
         Expense expense =
                 expenseRepository
@@ -169,25 +198,35 @@ public class ExpenseService {
         expenseRepository.delete(expense);
     }
 
-
     // =====================================================
     // CATEGORY SUMMARY
     // =====================================================
 
     public List<Object[]> getCategorySummary(
-            Long tripId) {
+            Long tripId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
 
         return expenseRepository
                 .getCategorySummary(tripId);
     }
-
 
     // =====================================================
     // TOTAL EXPENSE
     // =====================================================
 
     public BigDecimal getTotalExpenses(
-            Long tripId) {
+            Long tripId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
 
         BigDecimal total =
                 expenseRepository
@@ -198,33 +237,44 @@ public class ExpenseService {
                 : BigDecimal.ZERO;
     }
 
-
     // =====================================================
     // REMAINING BUDGET
     // =====================================================
 
     public BigDecimal getRemainingBudget(
-            Long tripId) {
+            Long tripId,
+            User currentUser) {
 
-        Optional<Budget> budgetOpt = budgetRepository.findByTripId(tripId);
+        tripAccessService.checkAccess(
+                tripId,
+                currentUser
+        );
+
+        Optional<Budget> budgetOpt =
+                budgetRepository.findByTripId(tripId);
+
         if (budgetOpt.isEmpty()) {
             return BigDecimal.ZERO;
         }
 
         Budget budget = budgetOpt.get();
-        BigDecimal totalBudget = budget.getTotalBudget() != null ? budget.getTotalBudget() : BigDecimal.ZERO;
-        BigDecimal totalExpense = getTotalExpenses(tripId);
+
+        BigDecimal totalBudget =
+                budget.getTotalBudget() != null
+                        ? budget.getTotalBudget()
+                        : BigDecimal.ZERO;
+
+        BigDecimal totalExpense =
+                getTotalExpenses(tripId, currentUser);
 
         return totalBudget.subtract(totalExpense);
     }
-
 
     // =====================================================
     // VALIDATION
     // =====================================================
 
-    private void validateExpense(
-            Expense expense) {
+    private void validateExpense(Expense expense) {
 
         if (expense.getTripId() == null) {
             throw new RuntimeException(
@@ -267,18 +317,14 @@ public class ExpenseService {
             );
         }
 
-        validateCategory(
-                expense.getCategory()
-        );
+        validateCategory(expense.getCategory());
     }
-
 
     // =====================================================
     // CATEGORY VALIDATION
     // =====================================================
 
-    private void validateCategory(
-            String category) {
+    private void validateCategory(String category) {
 
         List<String> allowedCategories = List.of(
                 "Transportation",

@@ -1,16 +1,27 @@
 import { useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -18,132 +29,148 @@ function Register() {
       const response = await axios.post(
         "http://localhost:8080/api/auth/register",
         {
-          name,
-          email,
+          name: name.trim(),
+          email: email.trim(),
           password,
         }
       );
 
       console.log("Registration successful:", response.data);
 
-      alert("Registration successful! Please login.");
-
+      setSuccess("Account created successfully! Redirecting to login...");
       setName("");
       setEmail("");
       setPassword("");
-    } catch (error) {
-      console.error(error);
-      alert("Registration failed!");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.message ||
+          "Registration failed. An account with this email may already exist."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="register-page">
+    <div style={styles.page}>
+      {/* Left Side Visual Banner */}
+      <div style={styles.leftSection}>
+        <div style={styles.leftOverlay}>
+          <Link to="/" style={styles.brandLink}>
+            <span style={styles.brandIcon}>✈️</span>
+            <span style={styles.brandText}>TripNest</span>
+          </Link>
 
-      {/* LEFT SIDE */}
-      <div className="travel-section">
-        <div className="travel-overlay">
-
-          <div className="brand">
-            <span>✈️</span>
-            <span>TripNest</span>
-          </div>
-
-          <div className="travel-content">
-            <p className="small-text">START YOUR ADVENTURE</p>
-
-            <h1>
+          <div style={styles.leftContent}>
+            <span style={styles.leftBadge}>JOIN THE TRAVEL COMMUNITY</span>
+            <h1 style={styles.leftTitle}>
               Your next adventure
               <br />
-              <span>starts here.</span>
+              <span style={styles.gradientText}>starts right here.</span>
             </h1>
-
-            <p>
-              Create your TripNest account and start planning
-              unforgettable journeys with ease.
+            <p style={styles.leftSub}>
+              Create your free TripNest account and unlock intuitive itinerary builders, real-time shared budget management, and interactive travel maps.
             </p>
 
-            <div className="travel-features">
-              <div>🌍 Discover places</div>
-              <div>🗺️ Plan journeys</div>
-              <div>✈️ Create memories</div>
+            <div style={styles.featureList}>
+              <div style={styles.featureItem}>
+                <span style={styles.featureIcon}>✨</span>
+                <span>Completely free to use</span>
+              </div>
+              <div style={styles.featureItem}>
+                <span style={styles.featureIcon}>🌍</span>
+                <span>Explore destinations worldwide</span>
+              </div>
+              <div style={styles.featureItem}>
+                <span style={styles.featureIcon}>👥</span>
+                <span>Invite friends & split expenses</span>
+              </div>
             </div>
           </div>
 
+          <div style={styles.leftFooter}>
+            © {new Date().getFullYear()} TripNest Inc. All rights reserved.
+          </div>
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
-      <div className="register-section">
-        <div className="register-card">
-
-          <div className="mobile-logo">
-            ✈️ <span>TripNest</span>
+      {/* Right Side Register Form */}
+      <div style={styles.rightSection}>
+        <div style={styles.formCard}>
+          <div style={styles.mobileBrand}>
+            <Link to="/" style={styles.mobileBrandLink}>
+              ✈️ TripNest
+            </Link>
           </div>
 
-          <div className="register-header">
-            <h2>Create your account ✨</h2>
-            <p>Join TripNest and start your journey</p>
+          <div style={styles.formHeader}>
+            <h2 style={styles.formTitle}>Create Account ✨</h2>
+            <p style={styles.formSub}>
+              Get started with your free personal travel hub.
+            </p>
           </div>
 
-          <form onSubmit={handleRegister}>
+          {success && <div style={styles.successBox}>✅ {success}</div>}
+          {error && <div style={styles.errorBox}>⚠️ {error}</div>}
 
+          <form onSubmit={handleRegister} style={styles.form}>
             {/* NAME */}
-            <div className="input-group">
-              <label>Full Name</label>
-
-              <div className="input-wrapper">
-                <span>👤</span>
-
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Full Name</label>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}>👤</span>
                 <input
                   type="text"
-                  placeholder="Enter your name"
+                  placeholder="e.g. Maya Patel"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  style={styles.input}
                   required
+                  autoFocus
                 />
               </div>
             </div>
 
             {/* EMAIL */}
-            <div className="input-group">
-              <label>Email Address</label>
-
-              <div className="input-wrapper">
-                <span>✉️</span>
-
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Email Address</label>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}>✉️</span>
                 <input
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="maya@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  style={styles.input}
                   required
                 />
               </div>
             </div>
 
             {/* PASSWORD */}
-            <div className="input-group">
-              <label>Password</label>
-
-              <div className="input-wrapper">
-                <span>🔒</span>
-
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Password</label>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}>🔒</span>
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Minimum 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  style={styles.input}
                   minLength={6}
                   required
                 />
-
                 <button
                   type="button"
-                  className="password-btn"
                   onClick={() => setShowPassword(!showPassword)}
+                  style={styles.passwordToggleBtn}
+                  tabIndex={-1}
                 >
                   {showPassword ? "🙈" : "👁️"}
                 </button>
@@ -152,405 +179,319 @@ function Register() {
 
             <button
               type="submit"
-              className="register-btn"
+              style={styles.submitBtn}
               disabled={loading}
             >
               {loading ? "Creating account..." : "Create Account →"}
             </button>
-
           </form>
 
-          <div className="divider">
-            <span>or</span>
+          <div style={styles.divider}>
+            <span style={styles.dividerLine} />
+            <span style={styles.dividerText}>or</span>
+            <span style={styles.dividerLine} />
           </div>
 
-          <p className="login-text">
+          <p style={styles.switchAuthText}>
             Already have an account?{" "}
-            <Link to="/login">Login</Link>
+            <Link to="/login" style={styles.switchAuthLink}>
+              Log in here
+            </Link>
           </p>
 
-          <p className="footer-text">
-            © 2026 TripNest • Travel. Plan. Explore.
-          </p>
-
+          <div style={styles.homeBackLinkWrapper}>
+            <Link to="/" style={styles.homeBackLink}>
+              ← Back to Homepage
+            </Link>
+          </div>
         </div>
       </div>
-
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
-
-        .register-page {
-          min-height: 100vh;
-          display: flex;
-          font-family: Arial, Helvetica, sans-serif;
-          background: #f5f8fc;
-        }
-
-        /* LEFT TRAVEL SECTION */
-
-        .travel-section {
-          width: 52%;
-          min-height: 100vh;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(5, 35, 65, 0.88),
-              rgba(0, 119, 182, 0.72)
-            ),
-            url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80");
-
-          background-size: cover;
-          background-position: center;
-
-          color: white;
-        }
-
-        .travel-overlay {
-          min-height: 100vh;
-          padding: 45px 60px;
-
-          display: flex;
-          flex-direction: column;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-
-          font-size: 27px;
-          font-weight: 800;
-        }
-
-        .brand span:first-child {
-          font-size: 30px;
-        }
-
-        .travel-content {
-          max-width: 600px;
-
-          margin-top: auto;
-          margin-bottom: auto;
-        }
-
-        .small-text {
-          font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 3px;
-
-          margin-bottom: 18px;
-          opacity: 0.85;
-        }
-
-        .travel-content h1 {
-          font-size: 52px;
-          line-height: 1.08;
-
-          margin: 0 0 25px;
-        }
-
-        .travel-content h1 span {
-          color: #73d2ff;
-        }
-
-        .travel-content > p {
-          max-width: 520px;
-
-          font-size: 17px;
-          line-height: 1.7;
-
-          color: #e7f5ff;
-        }
-
-        .travel-features {
-          display: flex;
-          flex-wrap: wrap;
-
-          gap: 12px;
-          margin-top: 30px;
-        }
-
-        .travel-features div {
-          padding: 11px 16px;
-
-          border: 1px solid rgba(255,255,255,0.25);
-          border-radius: 30px;
-
-          background: rgba(255,255,255,0.1);
-
-          backdrop-filter: blur(8px);
-
-          font-size: 14px;
-        }
-
-        /* RIGHT SECTION */
-
-        .register-section {
-          width: 48%;
-          min-height: 100vh;
-
-          display: flex;
-          justify-content: center;
-          align-items: center;
-
-          padding: 40px;
-        }
-
-        .register-card {
-          width: 100%;
-          max-width: 440px;
-        }
-
-        .mobile-logo {
-          display: none;
-        }
-
-        .register-header {
-          margin-bottom: 30px;
-        }
-
-        .register-header h2 {
-          margin: 0 0 8px;
-
-          font-size: 33px;
-          color: #102a43;
-        }
-
-        .register-header p {
-          margin: 0;
-
-          color: #718096;
-          font-size: 15px;
-        }
-
-        /* INPUTS */
-
-        .input-group {
-          margin-bottom: 20px;
-        }
-
-        .input-group label {
-          display: block;
-
-          margin-bottom: 8px;
-
-          font-size: 14px;
-          font-weight: 600;
-
-          color: #243b53;
-        }
-
-        .input-wrapper {
-          height: 52px;
-
-          display: flex;
-          align-items: center;
-
-          gap: 10px;
-
-          padding: 0 15px;
-
-          background: white;
-
-          border: 1px solid #d9e2ec;
-          border-radius: 12px;
-
-          transition: 0.2s;
-        }
-
-        .input-wrapper:focus-within {
-          border-color: #168aad;
-
-          box-shadow:
-            0 0 0 3px rgba(22, 138, 173, 0.12);
-        }
-
-        .input-wrapper input {
-          flex: 1;
-
-          height: 100%;
-
-          border: none;
-          outline: none;
-
-          background: transparent;
-
-          font-size: 15px;
-          color: #243b53;
-        }
-
-        .input-wrapper input::placeholder {
-          color: #9aa5b1;
-        }
-
-        .password-btn {
-          border: none;
-          background: transparent;
-
-          cursor: pointer;
-
-          font-size: 16px;
-          padding: 5px;
-        }
-
-        /* BUTTON */
-
-        .register-btn {
-          width: 100%;
-          height: 54px;
-
-          border: none;
-          border-radius: 12px;
-
-          background: linear-gradient(
-            135deg,
-            #0077b6,
-            #00a8cc
-          );
-
-          color: white;
-
-          font-size: 16px;
-          font-weight: 700;
-
-          cursor: pointer;
-
-          box-shadow:
-            0 8px 20px rgba(0, 119, 182, 0.25);
-
-          transition: 0.25s;
-        }
-
-        .register-btn:hover {
-          transform: translateY(-2px);
-
-          box-shadow:
-            0 12px 25px rgba(0, 119, 182, 0.32);
-        }
-
-        .register-btn:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        /* DIVIDER */
-
-        .divider {
-          display: flex;
-          align-items: center;
-
-          gap: 12px;
-
-          margin: 27px 0;
-
-          color: #9aa5b1;
-          font-size: 13px;
-        }
-
-        .divider::before,
-        .divider::after {
-          content: "";
-
-          flex: 1;
-
-          height: 1px;
-
-          background: #e4e7eb;
-        }
-
-        /* LOGIN LINK */
-
-        .login-text {
-          text-align: center;
-
-          color: #627d98;
-          font-size: 14px;
-        }
-
-        .login-text a {
-          color: #0077b6;
-
-          font-weight: 700;
-
-          text-decoration: none;
-        }
-
-        .login-text a:hover {
-          text-decoration: underline;
-        }
-
-        .footer-text {
-          text-align: center;
-
-          margin-top: 40px;
-
-          color: #9aa5b1;
-
-          font-size: 12px;
-        }
-
-        /* MOBILE */
-
-        @media (max-width: 850px) {
-
-          .register-page {
-            display: block;
-          }
-
-          .travel-section {
-            display: none;
-          }
-
-          .register-section {
-            width: 100%;
-            min-height: 100vh;
-
-            padding: 25px;
-          }
-
-          .mobile-logo {
-            display: block;
-
-            text-align: center;
-
-            font-size: 26px;
-            font-weight: 800;
-
-            color: #0077b6;
-
-            margin-bottom: 40px;
-          }
-
-          .mobile-logo span {
-            margin-left: 6px;
-          }
-
-          .register-header h2 {
-            font-size: 28px;
-          }
-        }
-
-        @media (max-width: 450px) {
-
-          .register-section {
-            padding: 20px;
-          }
-
-          .register-header h2 {
-            font-size: 25px;
-          }
-
-          .register-card {
-            max-width: 100%;
-          }
-        }
-      `}</style>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    background: "#ffffff",
+    fontFamily: "var(--font-sans, sans-serif)",
+  },
+
+  leftSection: {
+    flex: "1.1",
+    background: "linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)",
+    display: "flex",
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  leftOverlay: {
+    width: "100%",
+    padding: "48px 56px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    zIndex: 1,
+  },
+
+  brandLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    textDecoration: "none",
+    color: "#ffffff",
+  },
+
+  brandIcon: {
+    fontSize: "26px",
+  },
+
+  brandText: {
+    fontSize: "24px",
+    fontWeight: "800",
+    letterSpacing: "-0.5px",
+  },
+
+  leftContent: {
+    maxWidth: "520px",
+  },
+
+  leftBadge: {
+    display: "inline-block",
+    background: "rgba(255, 255, 255, 0.15)",
+    padding: "5px 14px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "800",
+    letterSpacing: "1px",
+    color: "#ffffff",
+    marginBottom: "16px",
+  },
+
+  leftTitle: {
+    fontSize: "clamp(32px, 4vw, 44px)",
+    fontWeight: "800",
+    color: "#ffffff",
+    lineHeight: "1.2",
+    marginBottom: "16px",
+  },
+
+  gradientText: {
+    color: "#7dd3fc",
+  },
+
+  leftSub: {
+    fontSize: "16px",
+    color: "#e0f2fe",
+    lineHeight: "1.6",
+    marginBottom: "32px",
+  },
+
+  featureList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+
+  featureItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+
+  featureIcon: {
+    fontSize: "18px",
+  },
+
+  leftFooter: {
+    fontSize: "12px",
+    color: "#93c5fd",
+  },
+
+  rightSection: {
+    flex: "1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 24px",
+    background: "#f8fafc",
+  },
+
+  formCard: {
+    width: "100%",
+    maxWidth: "440px",
+    background: "#ffffff",
+    borderRadius: "20px",
+    border: "1px solid #e2e8f0",
+    padding: "40px 36px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
+  },
+
+  mobileBrand: {
+    display: "none",
+    marginBottom: "20px",
+    textAlign: "center",
+  },
+
+  mobileBrandLink: {
+    fontSize: "22px",
+    fontWeight: "800",
+    color: "#0f172a",
+    textDecoration: "none",
+  },
+
+  formHeader: {
+    marginBottom: "24px",
+  },
+
+  formTitle: {
+    margin: "0 0 6px",
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+
+  formSub: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#64748b",
+  },
+
+  successBox: {
+    background: "#ecfdf5",
+    border: "1px solid #a7f3d0",
+    color: "#059669",
+    padding: "12px 14px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+
+  errorBox: {
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    padding: "12px 14px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+  },
+
+  formGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+
+  label: {
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#334155",
+  },
+
+  inputWrapper: {
+    display: "flex",
+    alignItems: "center",
+    background: "#ffffff",
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "0 14px",
+  },
+
+  inputIcon: {
+    fontSize: "14px",
+    color: "#94a3b8",
+    marginRight: "8px",
+  },
+
+  input: {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    padding: "12px 0",
+    fontSize: "14px",
+    color: "#0f172a",
+    background: "transparent",
+  },
+
+  passwordToggleBtn: {
+    background: "transparent",
+    border: "none",
+    fontSize: "16px",
+    cursor: "pointer",
+    padding: "4px",
+  },
+
+  submitBtn: {
+    marginTop: "8px",
+    padding: "13px",
+    borderRadius: "10px",
+    border: "none",
+    background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+    color: "#ffffff",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(2, 132, 199, 0.25)",
+  },
+
+  divider: {
+    display: "flex",
+    alignItems: "center",
+    margin: "24px 0",
+    gap: "12px",
+  },
+
+  dividerLine: {
+    flex: 1,
+    height: "1px",
+    background: "#e2e8f0",
+  },
+
+  dividerText: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    fontWeight: "600",
+  },
+
+  switchAuthText: {
+    textAlign: "center",
+    fontSize: "14px",
+    color: "#64748b",
+    margin: 0,
+  },
+
+  switchAuthLink: {
+    color: "#0284c7",
+    fontWeight: "700",
+    textDecoration: "none",
+  },
+
+  homeBackLinkWrapper: {
+    textAlign: "center",
+    marginTop: "20px",
+    paddingTop: "16px",
+    borderTop: "1px solid #f1f5f9",
+  },
+
+  homeBackLink: {
+    fontSize: "13px",
+    color: "#64748b",
+    textDecoration: "none",
+    fontWeight: "600",
+  },
+};
 
 export default Register;

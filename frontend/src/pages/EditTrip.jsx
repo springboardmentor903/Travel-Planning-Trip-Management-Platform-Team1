@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 function EditTrip() {
   const { id } = useParams();
@@ -22,7 +23,6 @@ function EditTrip() {
 
   const getAuthConfig = () => {
     const token = localStorage.getItem("token");
-
     return {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -31,16 +31,12 @@ function EditTrip() {
     };
   };
 
-  // ================= FETCH TRIP =================
-
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (!token) {
       navigate("/login");
       return;
     }
-
     fetchTrip();
   }, [id]);
 
@@ -55,9 +51,7 @@ function EditTrip() {
       );
 
       console.log("EDIT TRIP DATA:", response.data);
-
       const data = response.data;
-
       setTrip(data);
 
       setFormData({
@@ -69,55 +63,32 @@ function EditTrip() {
       });
     } catch (err) {
       console.error("Error fetching trip:", err);
-
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         navigate("/login");
         return;
       }
-
       setError(
-        err.response?.data?.message ||
-          "Unable to load trip details."
+        err.response?.data?.message || "Unable to load trip details."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // ================= INPUT CHANGE =================
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // ================= UPDATE TRIP =================
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.startDate) {
-      alert("Please select start date.");
-      return;
-    }
-
-    if (!formData.endDate) {
-      alert("Please select end date.");
-      return;
-    }
-
-    if (formData.travelers === "") {
-      alert("Please enter number of travelers.");
-      return;
-    }
-
-    if (formData.budget === "") {
-      alert("Please enter budget.");
+    if (!formData.startDate || !formData.endDate) {
+      alert("Please select start and end dates.");
       return;
     }
 
@@ -126,19 +97,24 @@ function EditTrip() {
       return;
     }
 
+    if (formData.travelers === "" || Number(formData.travelers) < 1) {
+      alert("Please enter a valid number of travelers.");
+      return;
+    }
+
+    if (formData.budget === "" || Number(formData.budget) < 0) {
+      alert("Please enter a valid budget.");
+      return;
+    }
+
     try {
       setSaving(true);
-
       const payload = {
         destination: trip.destination,
-
         startDate: formData.startDate,
         endDate: formData.endDate,
-
         travelers: Number(formData.travelers),
-
         budget: Number(formData.budget),
-
         status: formData.status,
       };
 
@@ -151,17 +127,14 @@ function EditTrip() {
       );
 
       alert("Trip updated successfully! ✅");
-
       navigate(`/trips/${id}`);
     } catch (err) {
       console.error("Error updating trip:", err);
-
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         navigate("/login");
         return;
       }
-
       alert(
         err.response?.data?.message ||
           "Unable to update trip. Please try again."
@@ -171,39 +144,30 @@ function EditTrip() {
     }
   };
 
-  // ================= LOADING =================
-
   if (loading) {
     return (
-      <div style={styles.center}>
-        <div style={styles.loadingIcon}>✈️</div>
-        <h2>Loading trip...</h2>
-        <p style={styles.muted}>
-          Please wait a moment.
-        </p>
+      <div style={styles.page}>
+        <Navbar activePage="/trips" />
+        <div style={styles.centerBox}>
+          <div style={styles.loadingEmoji}>⏳</div>
+          <h2>Loading trip details...</h2>
+        </div>
       </div>
     );
   }
 
-  // ================= ERROR =================
-
   if (error || !trip) {
     return (
-      <div style={styles.center}>
-        <div style={styles.errorIcon}>⚠️</div>
-
-        <h2>Unable to load trip</h2>
-
-        <p style={styles.error}>
-          {error || "Trip not found."}
-        </p>
-
-        <button
-          style={styles.primaryButton}
-          onClick={() => navigate("/trips")}
-        >
-          ← Back to My Trips
-        </button>
+      <div style={styles.page}>
+        <Navbar activePage="/trips" />
+        <div style={styles.centerBox}>
+          <div style={styles.errorEmoji}>⚠️</div>
+          <h2>Unable to load trip</h2>
+          <p style={styles.errorText}>{error || "Trip not found."}</p>
+          <Link to="/trips" style={styles.primaryBtn}>
+            ← Back to My Trips
+          </Link>
+        </div>
       </div>
     );
   }
@@ -211,92 +175,33 @@ function EditTrip() {
   const destinationName =
     trip.destination?.name ||
     trip.destination?.destinationName ||
-    "Unknown Destination";
+    "Destination";
 
   return (
     <div style={styles.page}>
-
-      {/* ================= HEADER ================= */}
-
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.logo}>TripNest</h1>
-
-          <p style={styles.headerSubtitle}>
-            Edit Trip
-          </p>
-        </div>
-
-        <div style={styles.headerButtons}>
-          <button
-            style={styles.secondaryButton}
-            onClick={() => navigate(`/trips/${id}`)}
-          >
-            ← Trip Details
-          </button>
-
-          <button
-            style={styles.secondaryButton}
-            onClick={() => navigate("/trips")}
-          >
-            🧳 My Trips
-          </button>
-        </div>
-      </header>
-
-      {/* ================= MAIN ================= */}
+      <Navbar activePage="/trips" />
 
       <main style={styles.container}>
-
         <div style={styles.card}>
-
-          <div style={styles.titleSection}>
-            <div style={styles.icon}>
-              ✈️
-            </div>
-
+          {/* Header */}
+          <div style={styles.header}>
+            <div style={styles.headerIcon}>✏️</div>
             <div>
-              <h2 style={styles.title}>
-                Edit Trip
-              </h2>
-
+              <span style={styles.badge}>TRIP SETTINGS</span>
+              <h1 style={styles.title}>Edit {destinationName} Trip</h1>
               <p style={styles.subtitle}>
-                Update your trip information
+                Update travel dates, guest count, status, or overall budget.
               </p>
             </div>
           </div>
 
-          <div style={styles.divider}></div>
-
-          {/* DESTINATION */}
-
-          <div style={styles.destinationBox}>
-            <span style={styles.label}>
-              📍 Destination
-            </span>
-
-            <strong style={styles.destination}>
-              {destinationName}
-            </strong>
-
-            <small style={styles.muted}>
-              Destination cannot be changed from this page.
-            </small>
-          </div>
-
-          {/* FORM */}
-
           <form onSubmit={handleSubmit}>
-
-            {/* DATE ROW */}
-
-            <div style={styles.formRow}>
-
+            {/* DATES GRID */}
+            <div style={styles.grid2Col}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>
-                  📅 Start Date
+                  Start Date <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="date"
                   name="startDate"
@@ -309,9 +214,8 @@ function EditTrip() {
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>
-                  📅 End Date
+                  End Date <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="date"
                   name="endDate"
@@ -321,87 +225,61 @@ function EditTrip() {
                   required
                 />
               </div>
-
             </div>
 
-            {/* TRAVELERS + BUDGET */}
-
-            <div style={styles.formRow}>
-
+            {/* TRAVELERS & BUDGET GRID */}
+            <div style={styles.grid2Col}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>
-                  👥 Travelers
+                  Travelers Count <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="number"
-                  name="travelers"
                   min="1"
+                  name="travelers"
                   value={formData.travelers}
                   onChange={handleChange}
                   style={styles.input}
-                  placeholder="Number of travelers"
                   required
                 />
               </div>
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>
-                  💰 Budget
+                  Trip Budget (₹) <span style={styles.required}>*</span>
                 </label>
-
                 <input
                   type="number"
-                  name="budget"
                   min="0"
+                  name="budget"
                   value={formData.budget}
                   onChange={handleChange}
                   style={styles.input}
-                  placeholder="Enter budget"
                   required
                 />
               </div>
-
             </div>
 
             {/* STATUS */}
-
             <div style={styles.formGroup}>
-              <label style={styles.label}>
-                📌 Status
-              </label>
-
+              <label style={styles.label}>Trip Status</label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                style={styles.input}
+                style={styles.select}
               >
-                <option value="PLANNED">
-                  PLANNED
-                </option>
-
-                <option value="ONGOING">
-                  ONGOING
-                </option>
-
-                <option value="COMPLETED">
-                  COMPLETED
-                </option>
-
-                <option value="CANCELLED">
-                  CANCELLED
-                </option>
+                <option value="PLANNED">Planned (Upcoming)</option>
+                <option value="ACTIVE">Active (In Progress)</option>
+                <option value="COMPLETED">Completed (Past)</option>
               </select>
             </div>
 
-            {/* BUTTONS */}
-
+            {/* ACTIONS */}
             <div style={styles.actions}>
-
               <button
                 type="button"
-                style={styles.cancelButton}
+                style={styles.cancelBtn}
                 onClick={() => navigate(`/trips/${id}`)}
                 disabled={saving}
               >
@@ -410,230 +288,194 @@ function EditTrip() {
 
               <button
                 type="submit"
-                style={styles.saveButton}
+                style={styles.submitBtn}
                 disabled={saving}
               >
-                {saving
-                  ? "Saving..."
-                  : "✓ Save Changes"}
+                {saving ? "Saving Changes..." : "✓ Update Trip"}
               </button>
-
             </div>
-
           </form>
-
         </div>
-
       </main>
     </div>
   );
 }
 
-/* =====================================================
-   STYLES
-===================================================== */
-
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f5f7fb",
-    color: "#111827",
-  },
-
-  header: {
-    background: "#ffffff",
-    borderBottom: "1px solid #e5e7eb",
-    padding: "20px 5%",
+    background: "#f8fafc",
+    color: "#0f172a",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "20px",
-    flexWrap: "wrap",
-  },
-
-  logo: {
-    margin: 0,
-    fontSize: "30px",
-    fontWeight: "700",
-  },
-
-  headerSubtitle: {
-    margin: "5px 0 0",
-    color: "#6b7280",
-  },
-
-  headerButtons: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-  },
-
-  secondaryButton: {
-    border: "1px solid #d1d5db",
-    background: "#ffffff",
-    color: "#111827",
-    padding: "10px 17px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
+    flexDirection: "column",
   },
 
   container: {
-    width: "90%",
-    maxWidth: "850px",
-    margin: "0 auto",
-    padding: "45px 0 60px",
+    maxWidth: "760px",
+    width: "92%",
+    margin: "36px auto 60px",
   },
 
   card: {
     background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "30px",
-    boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+    borderRadius: "20px",
+    border: "1px solid #e2e8f0",
+    padding: "36px 40px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
   },
 
-  titleSection: {
+  header: {
     display: "flex",
     alignItems: "center",
     gap: "18px",
+    marginBottom: "28px",
+    paddingBottom: "24px",
+    borderBottom: "1px solid #f1f5f9",
   },
 
-  icon: {
-    width: "60px",
-    height: "60px",
+  headerIcon: {
+    fontSize: "32px",
+    width: "56px",
+    height: "56px",
     borderRadius: "14px",
-    background: "#eef2ff",
+    background: "#f0f9ff",
+    border: "1px solid #bae6fd",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "30px",
+    flexShrink: 0,
+  },
+
+  badge: {
+    display: "inline-block",
+    fontSize: "11px",
+    fontWeight: "800",
+    color: "#0284c7",
+    letterSpacing: "1px",
+    marginBottom: "4px",
   },
 
   title: {
-    margin: 0,
-    fontSize: "28px",
+    margin: "0 0 4px",
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0f172a",
   },
 
   subtitle: {
-    margin: "6px 0 0",
-    color: "#6b7280",
+    margin: 0,
+    fontSize: "14px",
+    color: "#64748b",
   },
 
-  divider: {
-    height: "1px",
-    background: "#e5e7eb",
-    margin: "28px 0",
+  centerBox: {
+    padding: "80px 20px",
+    textAlign: "center",
+    maxWidth: "460px",
+    margin: "0 auto",
   },
 
-  destinationBox: {
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    padding: "18px",
-    marginBottom: "25px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "7px",
+  loadingEmoji: {
+    fontSize: "44px",
+    marginBottom: "12px",
   },
 
-  destination: {
-    fontSize: "19px",
+  errorEmoji: {
+    fontSize: "44px",
+    marginBottom: "12px",
   },
 
-  formRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "18px",
+  errorText: {
+    color: "#dc2626",
+    fontSize: "14px",
+    marginBottom: "16px",
+  },
+
+  primaryBtn: {
+    display: "inline-block",
+    background: "#0284c7",
+    color: "#ffffff",
+    padding: "10px 20px",
+    borderRadius: "8px",
+    fontWeight: "600",
+    textDecoration: "none",
   },
 
   formGroup: {
     marginBottom: "20px",
   },
 
+  grid2Col: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "18px",
+  },
+
   label: {
     display: "block",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#334155",
     marginBottom: "8px",
-    color: "#374151",
-    fontSize: "14px",
-    fontWeight: "600",
+  },
+
+  required: {
+    color: "#ef4444",
   },
 
   input: {
     width: "100%",
-    boxSizing: "border-box",
-    border: "1px solid #d1d5db",
-    borderRadius: "9px",
-    padding: "12px 13px",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
     fontSize: "14px",
     outline: "none",
     background: "#ffffff",
+    boxSizing: "border-box",
+  },
+
+  select: {
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
+    fontSize: "14px",
+    outline: "none",
+    background: "#ffffff",
+    boxSizing: "border-box",
   },
 
   actions: {
     display: "flex",
     justifyContent: "flex-end",
-    gap: "12px",
-    marginTop: "10px",
-    flexWrap: "wrap",
-  },
-
-  cancelButton: {
-    border: "1px solid #d1d5db",
-    background: "#ffffff",
-    color: "#374151",
-    padding: "12px 20px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-
-  saveButton: {
-    border: "none",
-    background: "#111827",
-    color: "#ffffff",
-    padding: "12px 22px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-
-  primaryButton: {
-    border: "none",
-    background: "#111827",
-    color: "#ffffff",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-
-  center: {
-    minHeight: "100vh",
-    display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    gap: "10px",
-    padding: "20px",
+    gap: "12px",
+    marginTop: "30px",
+    paddingTop: "20px",
+    borderTop: "1px solid #f1f5f9",
   },
 
-  loadingIcon: {
-    fontSize: "45px",
+  cancelBtn: {
+    padding: "11px 20px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
+    background: "#ffffff",
+    color: "#475569",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
 
-  errorIcon: {
-    fontSize: "45px",
-  },
-
-  error: {
-    color: "#b91c1c",
-    textAlign: "center",
-  },
-
-  muted: {
-    color: "#6b7280",
-    fontSize: "13px",
+  submitBtn: {
+    padding: "11px 26px",
+    borderRadius: "10px",
+    border: "none",
+    background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+    color: "#ffffff",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(2, 132, 199, 0.25)",
   },
 };
 

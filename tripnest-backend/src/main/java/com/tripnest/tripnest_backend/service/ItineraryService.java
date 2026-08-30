@@ -2,6 +2,7 @@ package com.tripnest.tripnest_backend.service;
 
 import com.tripnest.tripnest_backend.entity.Itinerary;
 import com.tripnest.tripnest_backend.entity.Trip;
+import com.tripnest.tripnest_backend.entity.User;
 import com.tripnest.tripnest_backend.repository.ItineraryRepository;
 import com.tripnest.tripnest_backend.repository.TripRepository;
 import org.springframework.stereotype.Service;
@@ -13,18 +14,28 @@ public class ItineraryService {
 
     private final ItineraryRepository itineraryRepository;
     private final TripRepository tripRepository;
+    private final TripAccessService tripAccessService;
 
     public ItineraryService(
             ItineraryRepository itineraryRepository,
-            TripRepository tripRepository) {
+            TripRepository tripRepository,
+            TripAccessService tripAccessService) {
 
         this.itineraryRepository = itineraryRepository;
         this.tripRepository = tripRepository;
+        this.tripAccessService = tripAccessService;
     }
 
+    // CREATE
     public Itinerary createItinerary(
             Integer tripId,
-            Itinerary itinerary) {
+            Itinerary itinerary,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId.longValue(),
+                currentUser
+        );
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() ->
@@ -35,8 +46,15 @@ public class ItineraryService {
         return itineraryRepository.save(itinerary);
     }
 
+    // GET
     public List<Itinerary> getItinerariesByTrip(
-            Integer tripId) {
+            Integer tripId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId.longValue(),
+                currentUser
+        );
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() ->
@@ -45,11 +63,17 @@ public class ItineraryService {
         return itineraryRepository.findByTrip(trip);
     }
 
-    // UPDATE ITINERARY
+    // UPDATE
     public Itinerary updateItinerary(
             Integer tripId,
             Integer itineraryId,
-            Itinerary updatedItinerary) {
+            Itinerary updatedItinerary,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId.longValue(),
+                currentUser
+        );
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() ->
@@ -63,28 +87,39 @@ public class ItineraryService {
         // Make sure itinerary belongs to this trip
         if (!itinerary.getTrip().getId().equals(trip.getId())) {
             throw new RuntimeException(
-                    "Itinerary does not belong to this trip");
+                    "Itinerary does not belong to this trip"
+            );
         }
 
         itinerary.setDayNumber(
-                updatedItinerary.getDayNumber());
+                updatedItinerary.getDayNumber()
+        );
 
         itinerary.setDate(
-                updatedItinerary.getDate());
+                updatedItinerary.getDate()
+        );
 
         itinerary.setTitle(
-                updatedItinerary.getTitle());
+                updatedItinerary.getTitle()
+        );
 
         itinerary.setDescription(
-                updatedItinerary.getDescription());
+                updatedItinerary.getDescription()
+        );
 
         return itineraryRepository.save(itinerary);
     }
 
-    // DELETE ITINERARY
+    // DELETE
     public void deleteItinerary(
             Integer tripId,
-            Integer itineraryId) {
+            Integer itineraryId,
+            User currentUser) {
+
+        tripAccessService.checkAccess(
+                tripId.longValue(),
+                currentUser
+        );
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() ->
@@ -98,7 +133,8 @@ public class ItineraryService {
         // Make sure itinerary belongs to this trip
         if (!itinerary.getTrip().getId().equals(trip.getId())) {
             throw new RuntimeException(
-                    "Itinerary does not belong to this trip");
+                    "Itinerary does not belong to this trip"
+            );
         }
 
         itineraryRepository.delete(itinerary);
