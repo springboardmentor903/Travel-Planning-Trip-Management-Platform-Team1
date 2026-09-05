@@ -23,40 +23,82 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                     @NonNull HttpServletResponse response,
-                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
+
+        System.out.println("=================================");
+        System.out.println("REQUEST: " + request.getRequestURI());
+        System.out.println("AUTH HEADER: " + authHeader);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+
+            System.out.println("NO JWT TOKEN FOUND");
+
             filterChain.doFilter(request, response);
             return;
         }
 
-        final String jwt = authHeader.substring(7);
+        String jwt = authHeader.substring(7);
 
         try {
-            final String email = jwtUtil.extractEmail(jwt);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            String email = jwtUtil.extractEmail(jwt);
 
-                if (jwtUtil.isTokenValid(jwt, userDetails.getUsername())) {
+            System.out.println("JWT EMAIL: " + email);
+
+            if (email != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                UserDetails userDetails =
+                        userDetailsService.loadUserByUsername(email);
+
+                System.out.println(
+                        "USER FOUND: " + userDetails.getUsername()
+                );
+
+                boolean valid =
+                        jwtUtil.isTokenValid(
+                                jwt,
+                                userDetails.getUsername()
+                        );
+
+                System.out.println("JWT VALID: " + valid);
+
+                if (valid) {
+
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
                     authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
+
+                    System.out.println("AUTHENTICATION SUCCESS");
                 }
             }
+
         } catch (Exception ex) {
-            // Any problem with the token (expired, malformed, or user no longer exists)
-            // just means: treat this request as unauthenticated. Don't crash, don't leak
-            // the real exception to the client — let it fall through to our
-            // CustomAuthenticationEntryPoint's clean 401 response.
-            System.out.println("JWT auth failed: " + ex.getMessage()); // temporary — check console, then remove
+
+            System.out.println("=================================");
+            System.out.println("JWT ERROR: " + ex.getClass().getName());
+            System.out.println("JWT ERROR MESSAGE: " + ex.getMessage());
+            ex.printStackTrace();
+            System.out.println("=================================");
+
             SecurityContextHolder.clearContext();
         }
 

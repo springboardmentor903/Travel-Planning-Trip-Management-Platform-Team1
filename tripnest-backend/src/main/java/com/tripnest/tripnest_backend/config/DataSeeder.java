@@ -21,7 +21,7 @@ public class DataSeeder implements CommandLineRunner {
  
     private static final List<String> DEFAULT_ROLES = List.of("TRAVELER", "GROUP_ADMIN", "ADMINISTRATOR");
     private static final String DEFAULT_ADMIN_EMAIL = "admin@tripnest.com";
-    private static final String DEFAULT_ADMIN_PASSWORD = "Admin@123";
+    private static final String DEFAULT_ADMIN_PASSWORD = "Adminvivek@123";
  
     @Override
     public void run(String... args) {
