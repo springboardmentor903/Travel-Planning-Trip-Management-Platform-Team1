@@ -155,4 +155,54 @@ class NotificationServiceTest {
 
         assertTrue(exception.getMessage().contains("not found"));
     }
+
+    @Test
+    void testMarkAllAsRead_Success() {
+        Notification n1 = new Notification();
+        n1.setId(1L);
+        n1.setUser(user1);
+        n1.setRead(false);
+
+        Notification n2 = new Notification();
+        n2.setId(2L);
+        n2.setUser(user1);
+        n2.setRead(false);
+
+        when(notificationRepository.findByUserOrderByCreatedAtDesc(user1))
+                .thenReturn(List.of(n1, n2));
+
+        notificationService.markAllAsRead(user1);
+
+        assertTrue(n1.isRead());
+        assertTrue(n2.isRead());
+        verify(notificationRepository, times(1)).saveAll(anyList());
+    }
+
+    @Test
+    void testDeleteNotification_Success() {
+        Notification n = new Notification();
+        n.setId(1L);
+        n.setUser(user1);
+
+        when(notificationRepository.findById(1L)).thenReturn(Optional.of(n));
+
+        assertDoesNotThrow(() -> notificationService.deleteNotification(1L, user1));
+        verify(notificationRepository, times(1)).delete(n);
+    }
+
+    @Test
+    void testDeleteNotification_AccessDeniedForOtherUser() {
+        Notification n = new Notification();
+        n.setId(1L);
+        n.setUser(user1);
+
+        when(notificationRepository.findById(1L)).thenReturn(Optional.of(n));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                notificationService.deleteNotification(1L, user2)
+        );
+
+        assertTrue(exception.getMessage().contains("Access denied"));
+        verify(notificationRepository, never()).delete(any(Notification.class));
+    }
 }

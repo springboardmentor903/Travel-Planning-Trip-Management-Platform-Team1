@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function NotificationDropdown() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -115,6 +117,33 @@ function NotificationDropdown() {
     }
   };
 
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      await axios.put(
+        "http://localhost:8080/api/notifications/read-all",
+        {},
+        getAuthConfig()
+      );
+      setNotifications((prev) =>
+        prev.map((item) => ({ ...item, isRead: true }))
+      );
+    } catch (err) {
+      console.error("Error marking all notifications as read:", err);
+      showToast("Failed to mark all as read.", "error");
+    }
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (!notification.isRead) {
+      handleMarkAsRead(notification.id);
+    }
+    if (notification.tripId) {
+      setIsOpen(false);
+      navigate(`/trips/${notification.tripId}`);
+    }
+  };
+
   // Delete — shows inline confirmation first
   const handleDeleteClick = (e, notificationId) => {
     e.stopPropagation();
@@ -222,9 +251,19 @@ function NotificationDropdown() {
             <div style={styles.headerTitleRow}>
               <span style={styles.headerTitle}>Notifications</span>
               {unreadCount > 0 ? (
-                <span style={styles.unreadCountBadge}>
-                  {unreadCount} new
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={styles.unreadCountBadge}>
+                    {unreadCount} new
+                  </span>
+                  <button
+                    style={styles.markAllReadBtn}
+                    onClick={handleMarkAllAsRead}
+                    title="Mark all notifications as read"
+                    id="notification-mark-all-btn"
+                  >
+                    Mark all read
+                  </button>
+                </div>
               ) : (
                 <span style={styles.allReadText}>All caught up</span>
               )}
@@ -288,7 +327,9 @@ function NotificationDropdown() {
                     ...styles.notificationItem,
                     ...(isUnread ? styles.notificationItemUnread : {}),
                     ...(isDeleting ? styles.notificationItemFading : {}),
+                    cursor: "pointer",
                   }}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   {/* Status Indicator */}
                   <div style={styles.indicatorCol}>
@@ -480,6 +521,19 @@ const styles = {
     fontWeight: "700",
     padding: "2px 8px",
     borderRadius: "12px",
+  },
+
+  markAllReadBtn: {
+    background: "none",
+    border: "none",
+    padding: "2px 6px",
+    fontSize: "11px",
+    color: "#0284c7",
+    fontWeight: "600",
+    cursor: "pointer",
+    borderRadius: "6px",
+    lineHeight: 1,
+    transition: "background 0.15s ease",
   },
 
   allReadText: {

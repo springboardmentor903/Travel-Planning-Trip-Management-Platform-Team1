@@ -116,4 +116,39 @@ class NotificationControllerTest {
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
+
+    @Test
+    void testMarkAllAsRead_Success() {
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+
+        ResponseEntity<?> response = notificationController.markAllAsRead(authentication);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(notificationService, times(1)).markAllAsRead(currentUser);
+    }
+
+    @Test
+    void testDeleteNotification_Success() {
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+
+        ResponseEntity<?> response = notificationController.deleteNotification(1L, authentication);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(notificationService, times(1)).deleteNotification(1L, currentUser);
+    }
+
+    @Test
+    void testDeleteNotification_Forbidden() {
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+
+        doThrow(new RuntimeException("Access denied: You cannot delete another user's notification"))
+                .when(notificationService).deleteNotification(1L, currentUser);
+
+        ResponseEntity<?> response = notificationController.deleteNotification(1L, authentication);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
 }

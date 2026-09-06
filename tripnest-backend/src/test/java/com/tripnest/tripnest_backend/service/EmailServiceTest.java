@@ -144,4 +144,59 @@ class EmailServiceTest {
             serviceWithNullSender.sendLoginNotificationEmail(requester, LocalDateTime.now());
         });
     }
+
+    @Test
+    void testSendTripInvitationEmail_Success() {
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        assertDoesNotThrow(() ->
+                emailService.sendTripInvitationEmail(owner, requester, trip, "token-1234", "http://localhost:5173")
+        );
+
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    void testSendInvitationAcceptedEmail_Success() {
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        assertDoesNotThrow(() ->
+                emailService.sendInvitationAcceptedEmail(owner, requester, trip)
+        );
+
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    void testSendInvitationRejectedEmail_Success() {
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        assertDoesNotThrow(() ->
+                emailService.sendInvitationRejectedEmail(owner, requester, trip)
+        );
+
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    void testSendReminderEmail_Success() {
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        assertDoesNotThrow(() ->
+                emailService.sendReminderEmail(requester, "Upcoming Trip", "Starts tomorrow!", trip)
+        );
+
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    void testSendJoinRequestEmail_WithRequesterEmail_Success() {
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        assertDoesNotThrow(() ->
+                emailService.sendJoinRequestEmail(owner, "Alice Traveler", "alice@example.com", trip)
+        );
+
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
 }

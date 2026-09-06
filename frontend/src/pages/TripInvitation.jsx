@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/Navbar";
@@ -15,6 +15,8 @@ function TripInvitation() {
   const [processing, setProcessing] = useState(false);
   const [actionSuccess, setActionSuccess] = useState("");
   const [actionError, setActionError] = useState("");
+
+  const autoActionExecuted = useRef(false);
 
   const authToken = localStorage.getItem("token");
   const currentUserEmail = (localStorage.getItem("userEmail") || "").toLowerCase().trim();
@@ -51,6 +53,24 @@ function TripInvitation() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    if (
+      invitation &&
+      invitation.status === "PENDING" &&
+      !invitation.isExpired &&
+      authToken &&
+      isEmailMatching() &&
+      !autoActionExecuted.current
+    ) {
+      const action = searchParams.get("action");
+      if (action === "accept") {
+        autoActionExecuted.current = true;
+        handleAccept();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitation, authToken]);
 
   // Handle Accept
   const handleAccept = async () => {

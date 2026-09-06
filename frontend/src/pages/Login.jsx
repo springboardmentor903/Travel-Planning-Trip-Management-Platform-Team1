@@ -35,7 +35,11 @@ function Login() {
         if (response.data.email) localStorage.setItem("userEmail", response.data.email);
         if (response.data.role) localStorage.setItem("userRole", response.data.role);
 
-        if (response.data.role === "ADMINISTRATOR") {
+        const redirectUrl = localStorage.getItem("invitationRedirect");
+        if (redirectUrl) {
+          localStorage.removeItem("invitationRedirect");
+          navigate(redirectUrl);
+        } else if (response.data.role === "ADMINISTRATOR") {
           navigate("/admin");
         } else {
           navigate("/dashboard");

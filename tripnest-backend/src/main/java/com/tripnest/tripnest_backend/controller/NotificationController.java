@@ -71,6 +71,21 @@ public class NotificationController {
         }
     }
 
+    @PutMapping("/read-all")
+    public ResponseEntity<?> markAllAsRead(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Authentication required"));
+        }
+
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("Current user not found"));
+
+        notificationService.markAllAsRead(currentUser);
+        return ResponseEntity.ok(Map.of("message", "All notifications marked as read"));
+    }
+
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<?> deleteNotification(
             @PathVariable Long notificationId,

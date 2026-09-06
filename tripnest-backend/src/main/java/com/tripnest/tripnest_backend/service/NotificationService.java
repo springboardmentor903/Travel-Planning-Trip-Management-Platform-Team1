@@ -147,6 +147,25 @@ public class NotificationService {
         return NotificationDTO.fromEntity(updated);
     }
 
+    @Transactional
+    public void markAllAsRead(User user) {
+        if (user == null) {
+            throw new RuntimeException("User must not be null");
+        }
+        List<Notification> userNotifications = notificationRepository.findByUserOrderByCreatedAtDesc(user);
+        boolean changed = false;
+        for (Notification notification : userNotifications) {
+            if (!notification.isRead()) {
+                notification.setRead(true);
+                changed = true;
+            }
+        }
+        if (changed) {
+            notificationRepository.saveAll(userNotifications);
+        }
+        log.info("All notifications marked as read for user {}", user.getEmail());
+    }
+
     @Transactional(readOnly = true)
     public long getUnreadCount(User user) {
         if (user == null) {

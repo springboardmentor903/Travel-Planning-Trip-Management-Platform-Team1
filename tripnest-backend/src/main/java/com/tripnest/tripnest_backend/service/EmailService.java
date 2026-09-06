@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -39,7 +40,7 @@ public class EmailService {
         if (envUser != null && !envUser.trim().isEmpty()) {
             return envUser.trim();
         }
-        return "tripnest.travel.app@gmail.com";
+        return "";
     }
 
     private String getFrontendBaseUrl() {
@@ -49,29 +50,37 @@ public class EmailService {
         return "http://localhost:5173";
     }
 
+    @Async
     public void sendEmail(String toEmail, String subject, String body) {
         if (mailSender == null) {
-            log.info("JavaMailSender is not configured. Skipping email to: {}", toEmail);
+            log.info("[TripNest Mail] JavaMailSender is not configured. Skipping email to: {}", toEmail);
             return;
         }
 
         if (toEmail == null || toEmail.trim().isEmpty()) {
-            log.warn("Recipient email is empty. Skipping email.");
+            log.warn("[TripNest Mail] Recipient email is empty. Skipping email.");
+            return;
+        }
+
+        String from = getSenderEmail();
+        if (from.isEmpty()) {
+            log.warn("[TripNest Mail] Sender email is not configured. Skipping email to: {}", toEmail);
             return;
         }
 
         try {
-            log.info("Attempting to send TripNest email to recipient: {}", toEmail);
+            log.info("[TripNest Mail] Preparing email");
+            log.info("[TripNest Mail] Recipient configured");
             SimpleMailMessage message = new SimpleMailMessage();
-            String from = getSenderEmail();
             message.setFrom("TripNest <" + from + ">");
-            message.setTo(toEmail);
+            message.setTo(toEmail.trim());
             message.setSubject(subject);
             message.setText(body);
+            log.info("[TripNest Mail] Sending email");
             mailSender.send(message);
-            log.info("TripNest email sent successfully to: {}", toEmail);
+            log.info("[TripNest Mail] Email sent successfully");
         } catch (Exception ex) {
-            log.warn("TripNest email failed to {}: {} - {}", toEmail, ex.getClass().getSimpleName(), ex.getMessage());
+            log.warn("[TripNest Mail] Email sending failed: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());
         }
     }
 
@@ -79,33 +88,41 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, htmlContent, null);
     }
 
+    @Async
     public void sendHtmlEmail(String toEmail, String subject, String htmlContent, String replyTo) {
         if (mailSender == null) {
-            log.info("JavaMailSender is not configured. Skipping HTML email to: {}", toEmail);
+            log.info("[TripNest Mail] JavaMailSender is not configured. Skipping HTML email to: {}", toEmail);
             return;
         }
 
         if (toEmail == null || toEmail.trim().isEmpty()) {
-            log.warn("Recipient email is empty. Skipping HTML email.");
+            log.warn("[TripNest Mail] Recipient email is empty. Skipping HTML email.");
+            return;
+        }
+
+        String from = getSenderEmail();
+        if (from.isEmpty()) {
+            log.warn("[TripNest Mail] Sender email is not configured. Skipping HTML email to: {}", toEmail);
             return;
         }
 
         try {
-            log.info("Attempting to send TripNest HTML email to recipient: {}", toEmail);
+            log.info("[TripNest Mail] Preparing email");
+            log.info("[TripNest Mail] Recipient configured");
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            String from = getSenderEmail();
             helper.setFrom(from, "TripNest");
-            helper.setTo(toEmail);
+            helper.setTo(toEmail.trim());
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
             if (replyTo != null && !replyTo.trim().isEmpty()) {
                 helper.setReplyTo(replyTo.trim());
             }
+            log.info("[TripNest Mail] Sending email");
             mailSender.send(mimeMessage);
-            log.info("TripNest email sent successfully to: {}", toEmail);
+            log.info("[TripNest Mail] Email sent successfully");
         } catch (Exception ex) {
-            log.warn("TripNest email failed to {}: {} - {}", toEmail, ex.getClass().getSimpleName(), ex.getMessage());
+            log.warn("[TripNest Mail] Email sending failed: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());
         }
     }
 
@@ -277,7 +294,7 @@ public class EmailService {
         );
 
         String html = buildEmailTemplate("New Join Request", body);
-        sendHtmlEmail(owner.getEmail(), subject, html);
+        sendHtmlEmail(owner.getEmail(), subject, html, requesterEmail);
     }
 
     public void sendJoinRequestEmail(User owner, String requesterName, Trip trip) {
@@ -292,7 +309,7 @@ public class EmailService {
 
         String tripName = getTripName(trip);
         String destination = getTripDestination(trip);
-        String subject = "Your TripNest Join Request Was Accepted";
+        String subject = "Your Trip Request Was Accepted";
         String tripUrl = getFrontendBaseUrl() + "/trips";
         if (trip != null && trip.getId() != null) {
             tripUrl = getFrontendBaseUrl() + "/trips/" + trip.getId();
@@ -330,7 +347,7 @@ public class EmailService {
 
         String tripName = getTripName(trip);
         String destination = getTripDestination(trip);
-        String subject = "Update on Your TripNest Join Request";
+        String subject = "Your Trip Request Was Rejected";
 
         String body = String.format(
                 "<p>Hello <strong>%s</strong>,</p>" +
